@@ -72,6 +72,29 @@ export function renderSlideHtml(
       ? `<div style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.body}px;line-height:1.62;word-break:keep-all;color:${color};">${escapeHtml(slide.body)}</div>`
       : "";
 
+  // Media region: when a slide carries an image, render it inside a framed
+  // region on the brand paper (museum-plate feel) with the headline/body as a
+  // caption below — instead of a full-bleed wash behind the text.
+  if (slide.media) {
+    const src = slide.media.src;
+    const fit = slide.media.fit || "cover";
+    const big = slide.role === "hook";
+    const capHead = slide.headline
+      ? `<div style="font-family:${headFont};font-weight:700;font-size:${big ? SIZE.head : 44}px;line-height:1.14;letter-spacing:-0.01em;word-break:keep-all;color:${c.primary};">${escapeHtml(slide.headline)}</div>`
+      : "";
+    const capBody = slide.body
+      ? `<div style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.body - 4}px;line-height:1.55;word-break:keep-all;color:${c.secondary};">${escapeHtml(slide.body)}</div>`
+      : "";
+    return `<div style="position:relative;width:100%;height:100%;background:${c.background};color:${c.primary};padding:8% 8% 11%;display:flex;flex-direction:column;gap:24px;overflow:hidden;">
+    ${eyebrowRow(brandName)}
+    <div style="flex:1;min-height:0;border:1px solid ${c.line};border-radius:6px;overflow:hidden;background:${c.surface};">
+      <img src="${src}" alt="" style="width:100%;height:100%;object-fit:${fit};display:block;" />
+    </div>
+    ${capHead}${capBody}
+    ${footer}
+  </div>`;
+  }
+
   let inner = "";
   if (layout === "cover") {
     inner = `${eyebrowRow(brandName)}${headline(SIZE.coverHead)}${bodyHtml(subInk)}`;
