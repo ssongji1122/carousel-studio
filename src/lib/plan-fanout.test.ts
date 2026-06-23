@@ -14,6 +14,7 @@ vi.mock("@/lib/plans", () => ({
 }));
 
 const { fanoutPlan } = await import("@/lib/plan-fanout");
+const { updateCarousel } = await import("@/lib/carousels");
 
 describe("fanoutPlan", () => {
   it("creates one carousel per uncreated item and marks them created", async () => {
@@ -27,6 +28,14 @@ describe("fanoutPlan", () => {
     const out = await fanoutPlan(plan);
     expect(created).toEqual(["A", "B"]);
     expect(out.items.every((i: any) => i.status === "created" && i.carouselId)).toBe(true);
+    expect(updateCarousel).toHaveBeenCalledWith(
+      expect.any(String),
+      { channel: "threads", tags: ["교육"] },
+    );
+    expect(updateCarousel).toHaveBeenCalledWith(
+      expect.any(String),
+      { channel: "threads", tags: ["인사이트"] },
+    );
   });
 
   it("skips already-created items", async () => {
@@ -38,7 +47,10 @@ describe("fanoutPlan", () => {
         { id: 2, pillar: "y", topic: "D", status: "planned", carouselId: null },
       ],
     };
-    await fanoutPlan(plan);
+    const out = await fanoutPlan(plan);
     expect(created).toEqual(["D"]);
+    expect(out.items[0].carouselId).toBe("existing");
+    expect(out.items[1].status).toBe("created");
+    expect(out.items[1].carouselId).toBeTruthy();
   });
 });
