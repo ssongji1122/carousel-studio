@@ -33,25 +33,40 @@ export async function POST(
     process.platform === "win32" && /\.(cmd|bat)$/i.test(claudePath);
   const spawner = isWindowsShim ? crossSpawn : spawn;
 
-  await new Promise<void>((resolve, reject) => {
-    const child = spawner(
-      claudePath,
-      [
-        "-p",
-        `시리즈 플랜 ${plan.id}의 필러와 주제 ${plan.count}개를 만들어 items API에 POST해줘.`,
-        "--append-system-prompt",
-        prompt,
-        "--allowedTools",
-        "Bash",
-      ],
-      {
-        cwd: process.cwd(),
-        stdio: "ignore",
-      }
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const child = spawner(
+        claudePath,
+        [
+          "-p",
+          `시리즈 플랜 ${plan.id}의 필러와 주제 ${plan.count}개를 만들어 items API에 POST해줘.`,
+          "--append-system-prompt",
+          prompt,
+          "--allowedTools",
+          "Bash",
+          "--max-budget-usd",
+          "1.00",
+          "--name",
+          "carrusel-plan",
+        ],
+        {
+          cwd: process.cwd(),
+          stdio: "ignore",
+        }
+      );
+      child.on("error", reject);
+      child.on("close", (code) =>
+        code === 0
+          ? resolve()
+          : reject(new Error("Claude CLI exited " + code))
+      );
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Plan generation failed" },
+      { status: 502 }
     );
-    child.on("error", reject);
-    child.on("close", () => resolve());
-  });
+  }
 
   const updated = await getPlan(id);
   return NextResponse.json(updated);
