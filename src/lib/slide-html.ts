@@ -7,25 +7,28 @@ import { DIMENSIONS } from "@/types/carousel";
  */
 export function extractFontFamilies(html: string): string[] {
   const families = new Set<string>();
-  // Match font-family: "Font Name" or font-family: 'Font Name' or font-family: Font Name
-  const regex = /font-family:\s*['"]?([^;'"}\n]+?)['"]?\s*[;}"]/g;
+  const generics = new Set([
+    "serif",
+    "sans-serif",
+    "monospace",
+    "cursive",
+    "fantasy",
+    "system-ui",
+    "inherit",
+    "initial",
+    "unset",
+  ]);
+  // Capture the FULL comma-separated value up to the terminating ; } or newline,
+  // then split on commas. The previous pattern stopped at the first quote inside the
+  // value, dropping every fallback family after the first (e.g. "Nanum Myeongjo" in a
+  // Korean headline chain), so those fonts were never requested from Google Fonts.
+  const regex = /font-family:\s*([^;}\n]+)/g;
   let match;
   while ((match = regex.exec(html)) !== null) {
-    const raw = match[1].trim();
-    // Split on commas and take non-generic font names
-    const generics = new Set([
-      "serif",
-      "sans-serif",
-      "monospace",
-      "cursive",
-      "fantasy",
-      "system-ui",
-      "inherit",
-      "initial",
-      "unset",
-    ]);
+    // Trim a trailing quote/closer that may have been swept up at the value end.
+    const raw = match[1].replace(/['"]\s*$/, "").trim();
     for (const part of raw.split(",")) {
-      const name = part.trim().replace(/['"]/g, "");
+      const name = part.trim().replace(/['"]/g, "").trim();
       if (name && !generics.has(name.toLowerCase())) {
         families.add(name);
       }
@@ -63,7 +66,7 @@ export function wrapSlideHtml(
     const params = googleFamilies
       .map(
         (f) =>
-          `family=${encodeURIComponent(f)}:wght@300;400;500;600;700;800`
+          `family=${encodeURIComponent(f)}:wght@400;500;600;700;800`
       )
       .join("&");
     fontBlock = `<link href="https://fonts.googleapis.com/css2?${params}&display=swap" rel="stylesheet">${pretendardLink}`;
