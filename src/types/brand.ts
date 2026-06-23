@@ -5,6 +5,13 @@ export interface BrandColors {
   background: string;
   surface: string;
   line: string;
+  // Optional extended palette for richer compositions (dark slides, serif
+  // numerals, tonal accents). Renderers fall back when absent.
+  dark?: string;
+  accentDark?: string;
+  eucalyptus?: string;
+  dusty?: string;
+  soot?: string;
 }
 
 export interface BrandFonts {

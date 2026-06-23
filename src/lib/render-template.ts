@@ -3,19 +3,20 @@ import type { BrandConfig } from "@/types/brand";
 
 type StructuredSlide = Pick<Slide, "role" | "headline" | "body" | "items" | "media">;
 
-// Compact (SNS) sizing tokens, scaled for the 1080px export canvas.
-// This tool only outputs Instagram/Threads, so it always uses the brand's
-// Compact variant (typography.md): bold Pretendard 700 headlines (Korean
-// primary, Mono fallback for Latin), Pretendard 500 body. Color palette is
-// DNA-locked. Sizes are tuned for phone-feed readability.
+// Compact (SNS) sizing tokens for the 1080px export canvas. This tool only
+// outputs Instagram/Threads, so it always uses the brand's Compact variant
+// (typography.md): bold Pretendard 700 headlines (Korean primary), Pretendard
+// 500 body, and Cormorant Garamond for display numerals (DNA lock). Layout
+// varies by slide type and tonal background shifts give the deck rhythm.
 const SIZE = {
-  eyebrow: 23,
-  coverHead: 100,
-  head: 58,
-  body: 38,
-  item: 36,
-  itemNum: 30,
+  eyebrow: 22,
+  coverHead: 104,
+  head: 60,
+  body: 37,
+  item: 35,
+  itemNum: 56,
   cta: 28,
+  footer: 18,
 };
 
 export function renderSlideHtml(
@@ -25,57 +26,75 @@ export function renderSlideHtml(
 ): string {
   const c = brand.colors;
   const mono = brand.fonts.mono || "JetBrains Mono";
-  // Korean is primary, so Pretendard 700 leads (clean Hangul, no monospace
-  // word-gaps); Mono stays the editorial signature on eyebrow + CTA.
-  // Single quotes only — values live inside a double-quoted style attribute.
+  const serif = brand.fonts.heading || "Cormorant Garamond"; // DNA lock: numerals
+  // Korean-primary headline: Pretendard 700 leads, Mono fallback for Latin.
   const headFont = `'${brand.fonts.body}', '${mono}', sans-serif`;
   const bodyFont = `'${brand.fonts.body}', -apple-system, sans-serif`;
+  const numFont = `'${serif}', 'Nanum Myeongjo', serif`;
+
+  const eucalyptus = c.eucalyptus || c.accent;
+  const darkBg = c.dark || "#181816";
+  const accentDark = c.accentDark || c.accent;
+  const paperMute = "rgba(245,244,240,0.66)";
 
   const hasItems = Array.isArray(slide.items) && slide.items.length > 0;
   const layout = slide.role === "hook" ? "cover"
     : slide.role === "cta" ? "closing"
     : hasItems ? "list" : "statement";
 
+  const isDark = layout === "statement";
+  const bg = layout === "cover" ? c.background
+    : layout === "list" ? c.surface
+    : layout === "statement" ? darkBg
+    : c.background;
+  const ink = isDark ? c.background : c.primary;
+  const subInk = isDark ? paperMute : c.secondary;
+  const accentInk = isDark ? accentDark : c.accent;
+
   const mediaHtml = slide.media
     ? `<img src="${slide.media.src}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:${slide.media.fit};opacity:0.9;" />`
     : "";
 
-  const eyebrowText = layout === "cover" ? "studio.soluta" : layout === "closing" ? "next" : "";
-  const eyebrow = eyebrowText
-    ? `<div style="font-family:'${mono}',monospace;font-weight:500;font-size:${SIZE.eyebrow}px;letter-spacing:0.14em;text-transform:uppercase;color:${c.secondary};">${eyebrowText}</div>`
-    : "";
+  const eyebrowRow = (label: string) =>
+    `<div style="display:flex;align-items:center;gap:18px;">
+      <span style="font-family:'${mono}',monospace;font-weight:500;font-size:${SIZE.eyebrow}px;letter-spacing:0.16em;text-transform:uppercase;color:${accentInk};">${label}</span>
+      <span style="flex:1;height:1px;background:${isDark ? "rgba(245,244,240,0.25)" : c.line};"></span>
+    </div>`;
 
-  const accentBar = `<div style="width:56px;height:4px;background:${c.accent};border-radius:2px;"></div>`;
+  const footer = `<div style="position:absolute;left:8%;bottom:6%;font-family:'${mono}',monospace;font-size:${SIZE.footer}px;letter-spacing:0.12em;text-transform:uppercase;color:${subInk};">studio.soluta</div>`;
 
-  const headSize = layout === "cover" ? SIZE.coverHead : SIZE.head;
-  const headline = `<div style="font-family:${headFont};font-weight:700;font-size:${headSize}px;line-height:1.12;letter-spacing:-0.01em;word-break:keep-all;color:${c.primary};">${escapeHtml(slide.headline)}</div>`;
+  const headline = (size: number) =>
+    `<div style="font-family:${headFont};font-weight:700;font-size:${size}px;line-height:1.12;letter-spacing:-0.01em;word-break:keep-all;color:${ink};">${escapeHtml(slide.headline)}</div>`;
 
-  const bodyHtml = slide.body
-    ? `<div style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.body}px;line-height:1.6;word-break:keep-all;color:${c.secondary};">${escapeHtml(slide.body)}</div>`
-    : "";
+  const bodyHtml = (color: string) =>
+    slide.body
+      ? `<div style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.body}px;line-height:1.62;word-break:keep-all;color:${color};">${escapeHtml(slide.body)}</div>`
+      : "";
 
   let inner = "";
   if (layout === "cover") {
-    inner = `${eyebrow}${headline}${bodyHtml}`;
+    inner = `${eyebrowRow("studio.soluta")}${headline(SIZE.coverHead)}${bodyHtml(subInk)}`;
   } else if (layout === "list") {
     const lis = slide.items.map((it, i) =>
-      `<div style="display:flex;gap:20px;align-items:baseline;">
-        <span style="font-family:'${mono}',monospace;font-weight:700;font-size:${SIZE.itemNum}px;color:${c.accent};flex:none;">${String(i + 1).padStart(2, "0")}</span>
-        <span style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.item}px;line-height:1.45;word-break:keep-all;color:${c.primary};">${escapeHtml(it)}</span>
+      `<div style="display:flex;gap:26px;align-items:baseline;border-top:1px solid ${c.line};padding-top:16px;">
+        <span style="font-family:${numFont};font-weight:500;font-size:${SIZE.itemNum}px;line-height:0.9;color:${eucalyptus};flex:none;min-width:64px;">${String(i + 1).padStart(2, "0")}</span>
+        <span style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.item}px;line-height:1.4;word-break:keep-all;color:${ink};">${escapeHtml(it)}</span>
       </div>`).join("");
-    inner = `${accentBar}${headline}<div style="display:flex;flex-direction:column;gap:22px;margin-top:8px;">${lis}</div>`;
-  } else if (layout === "closing") {
-    const ctaLine = `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:14px;font-family:'${mono}',monospace;font-weight:700;font-size:${SIZE.cta}px;color:${c.accent};">자세히 보기<span style="border-bottom:3px solid ${c.accent};width:72px;"></span></div>`;
-    inner = `${eyebrow}${headline}${bodyHtml}${ctaLine}`;
+    inner = `${eyebrowRow("list")}${headline(SIZE.head)}<div style="display:flex;flex-direction:column;gap:18px;margin-top:10px;">${lis}</div>`;
+  } else if (layout === "statement") {
+    const quote = `<div style="font-family:${numFont};font-size:120px;line-height:0.5;color:${accentDark};height:64px;">&ldquo;</div>`;
+    inner = `${quote}${headline(SIZE.head)}${bodyHtml(paperMute)}`;
   } else {
-    inner = `${accentBar}${headline}${bodyHtml}`;
+    const ctaPill = `<div style="margin-top:14px;display:inline-flex;align-items:center;gap:14px;align-self:flex-start;background:${c.accent};color:${c.background};font-family:${bodyFont};font-weight:600;font-size:${SIZE.cta}px;padding:16px 30px;border-radius:999px;">자세히 보기 <span style="font-family:'${mono}',monospace;">-&gt;</span></div>`;
+    inner = `${eyebrowRow("next")}${headline(SIZE.head)}${bodyHtml(subInk)}${ctaPill}`;
   }
 
-  return `<div style="position:relative;width:100%;height:100%;background:${c.background};color:${c.primary};padding:8%;display:flex;flex-direction:column;justify-content:center;gap:30px;overflow:hidden;">
+  return `<div style="position:relative;width:100%;height:100%;background:${bg};color:${ink};padding:8% 8% 11%;display:flex;flex-direction:column;justify-content:center;gap:30px;overflow:hidden;">
   ${mediaHtml}
   <div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:30px;">
     ${inner}
   </div>
+  ${footer}
 </div>`;
 }
 

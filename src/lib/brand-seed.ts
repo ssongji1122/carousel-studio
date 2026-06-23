@@ -25,6 +25,11 @@ export const STUDIO_SOLUTA_SEED: BrandConfig = {
     background: "#F5F4F0",
     surface: "#EEEAE0",
     line: "#E5E1D8",
+    dark: "#181816",
+    accentDark: "#A6A999",
+    eucalyptus: "#98AA9D",
+    dusty: "#8496A2",
+    soot: "#2D3536",
   },
   fonts: {
     heading: "Cormorant Garamond",
