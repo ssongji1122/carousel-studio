@@ -49,7 +49,7 @@ export default function PlanDetailPage({ params }: PageProps) {
     setDirty(true);
   };
 
-  const handleSaveItems = async () => {
+  const handleSaveItems = async (): Promise<boolean> => {
     setSaving(true);
     setError(null);
     try {
@@ -63,11 +63,13 @@ export default function PlanDetailPage({ params }: PageProps) {
         setPlan(updated);
         setLocalItems(updated.items);
         setDirty(false);
-      } else {
-        setError("Failed to save changes.");
+        return true;
       }
+      setError("Failed to save changes.");
+      return false;
     } catch {
       setError("Network error.");
+      return false;
     } finally {
       setSaving(false);
     }
@@ -94,9 +96,14 @@ export default function PlanDetailPage({ params }: PageProps) {
   };
 
   const handleFanout = async () => {
-    // Save pending edits first
+    // Save pending edits first; abort if the save fails so fan-out never
+    // operates on a stale server-side plan (silently dropping the edits).
     if (dirty) {
-      await handleSaveItems();
+      const ok = await handleSaveItems();
+      if (!ok) {
+        setError("저장에 실패해 캐로셀 생성을 멈췄습니다.");
+        return;
+      }
     }
     setFanning(true);
     setError(null);
