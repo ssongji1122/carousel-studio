@@ -11,11 +11,12 @@ import { ChatPanel } from "@/components/chat/ChatPanel";
 import { CarouselPreview } from "@/components/editor/CarouselPreview";
 import { SlideFilmstrip } from "@/components/editor/SlideFilmstrip";
 import { AspectRatioSelector } from "@/components/editor/AspectRatioSelector";
+import { ChannelSelector } from "@/components/editor/ChannelSelector";
 import { ExportButton } from "@/components/editor/ExportButton";
 import { CaptionPanel } from "@/components/editor/CaptionPanel";
 import { SafeZoneOverlay } from "@/components/editor/SafeZoneOverlay";
 import { FullscreenPreview } from "@/components/editor/FullscreenPreview";
-import type { Carousel, AspectRatio } from "@/types/carousel";
+import type { Carousel, AspectRatio, Channel } from "@/types/carousel";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -100,6 +101,19 @@ export default function CarouselEditorPage({ params }: PageProps) {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ aspectRatio: ratio }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setCarousel(updated);
+    }
+  };
+
+  const handleChannelChange = async (channel: Channel) => {
+    if (!carousel) return;
+    const res = await fetch(`/api/carousels/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel }),
     });
     if (res.ok) {
       const updated = await res.json();
@@ -257,6 +271,11 @@ export default function CarouselEditorPage({ params }: PageProps) {
             <AspectRatioSelector
               value={carousel.aspectRatio}
               onChange={handleAspectChange}
+            />
+            <div className="w-px h-5 bg-border" />
+            <ChannelSelector
+              value={carousel.channel}
+              onChange={handleChannelChange}
             />
             <div className="flex-1" />
             <Button
