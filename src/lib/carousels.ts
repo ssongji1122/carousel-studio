@@ -99,7 +99,7 @@ export async function addSlide(
   carouselId: string,
   html: string,
   notes = "",
-  structured?: Partial<Pick<Slide, "role" | "headline" | "body" | "media">>
+  structured?: Partial<Pick<Slide, "role" | "headline" | "body" | "items" | "media">>
 ): Promise<Slide | null> {
   const data = await load();
   const carousel = data.carousels.find((c) => c.id === carouselId);
@@ -115,6 +115,7 @@ export async function addSlide(
     role: structured?.role ?? "body",
     headline: structured?.headline ?? "",
     body: structured?.body ?? "",
+    items: structured?.items ?? [],
     media: structured?.media ?? null,
   };
   carousel.slides.push(slide);
@@ -126,7 +127,7 @@ export async function addSlide(
 export async function updateSlide(
   carouselId: string,
   slideId: string,
-  updates: Partial<Pick<Slide, "html" | "notes" | "role" | "headline" | "body" | "media">>
+  updates: Partial<Pick<Slide, "html" | "notes" | "role" | "headline" | "body" | "items" | "media">>
 ): Promise<Slide | null> {
   const data = await load();
   const carousel = data.carousels.find((c) => c.id === carouselId);

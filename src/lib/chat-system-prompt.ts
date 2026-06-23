@@ -51,8 +51,15 @@ ${stylePreset.exampleSlideHtml ? `Structured example slide that matches this pre
 4. 슬라이드 카피: 각 장 headline(짧게)·body. 슬라이드당 텍스트 50자 이내.
 5. 보이스 검수: 금칙어(${banned}) 금지, 이모지 0, 느낌표 한 글 1개 이내, ${v.ending}.
 
+## 슬라이드 형태를 변주해 단조로움을 피한다
+- hook: 표지. headline만 강하게(body는 짧은 한 줄 또는 생략).
+- body 중 최소 한 장은 리스트형으로: headline + items(항목 3~5개, 각 한 줄). 이때 body는 비우고 items 배열을 채운다.
+- 나머지 body: 서술형(headline + body).
+- cta: 마무리. headline + body(행동 유도).
+
 ## 출력 형식 — 구조화 슬라이드만, 자유 HTML 금지
-각 슬라이드를 { role, headline, body } 구조로 만들어 슬라이드 생성 API로 보낸다.
+각 슬라이드를 { role, headline, body, items } 구조로 만들어 슬라이드 생성 API로 보낸다.
+리스트 슬라이드는 items에 항목 배열을 넣고 body는 비운다. 그 외에는 items를 비운다([]).
 HTML을 직접 작성하지 않는다 — 렌더는 앱의 템플릿이 담당한다.`;
 
   return `You are the autonomous AI design engine for Carousel Studio. You create stunning carousels proactively — don't wait for permission, just create.
@@ -69,15 +76,20 @@ ${chainSection}
 
 ## API — Use curl for all operations
 
-### Create a slide:
+### Create a slide (statement):
 curl -s -X POST http://localhost:3000/api/carousels/${carousel?.id || "{ID}"}/slides \\
   -H "Content-Type: application/json" \\
-  -d '{"role": "hook", "headline": "HEADLINE", "body": "BODY"}'
+  -d '{"role": "hook", "headline": "HEADLINE", "body": "BODY", "items": []}'
+
+### Create a list slide (body empty, items filled):
+curl -s -X POST http://localhost:3000/api/carousels/${carousel?.id || "{ID}"}/slides \\
+  -H "Content-Type: application/json" \\
+  -d '{"role": "body", "headline": "HEADLINE", "body": "", "items": ["항목1", "항목2", "항목3"]}'
 
 ### Update a slide:
 curl -s -X PUT http://localhost:3000/api/carousels/${carousel?.id || "{ID}"}/slides/{SLIDE_ID} \\
   -H "Content-Type: application/json" \\
-  -d '{"role": "body", "headline": "UPDATED HEADLINE", "body": "UPDATED BODY"}'
+  -d '{"role": "body", "headline": "UPDATED HEADLINE", "body": "UPDATED BODY", "items": []}'
 
 ### Delete a slide:
 curl -s -X DELETE http://localhost:3000/api/carousels/${carousel?.id || "{ID}"}/slides/{SLIDE_ID}

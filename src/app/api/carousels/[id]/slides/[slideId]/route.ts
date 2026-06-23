@@ -13,7 +13,7 @@ export async function PUT(
     const body = await request.json();
 
     // Re-render when structured fields are being updated
-    if (body.role !== undefined || body.headline !== undefined || body.body !== undefined || body.media !== undefined) {
+    if (body.role !== undefined || body.headline !== undefined || body.body !== undefined || body.items !== undefined || body.media !== undefined) {
       const carousel = await getCarousel(id);
       if (!carousel) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -28,6 +28,9 @@ export async function PUT(
         role: (body.role ?? existing.role) as SlideRole,
         headline: String(body.headline ?? existing.headline),
         body: String(body.body ?? existing.body),
+        items: Array.isArray(body.items)
+          ? body.items.map((x: unknown) => String(x))
+          : (existing.items ?? []),
         media: (body.media !== undefined ? body.media : existing.media) as MediaRef | null,
       };
 

@@ -252,9 +252,9 @@ export function ChatPanel({
     <div className="h-full flex flex-col">
       <div className="px-4 py-3 border-b border-border flex items-start justify-between">
         <div>
-          <h2 className="text-sm font-semibold">AI Assistant</h2>
+          <h2 className="text-sm font-semibold">문안 도우미</h2>
           <p className="text-xs text-muted-foreground">
-            Describe the carousel you want to create
+            업종·타깃·주제를 알려주면 브랜드 톤으로 캐로셀을 만듭니다
           </p>
         </div>
         {messages.length > 0 && (
@@ -275,10 +275,16 @@ export function ChatPanel({
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {messages.length === 0 && (
-          <div className="p-6 text-center text-muted-foreground">
-            <p className="text-sm mb-1">No messages yet</p>
-            <p className="text-xs">
-              Tell me what carousel you&apos;d like to create
+          <div className="p-6 text-muted-foreground">
+            <p className="text-sm font-medium text-foreground mb-3">이렇게 시작하세요</p>
+            <ol className="text-xs space-y-2 list-none">
+              <li><span className="text-accent font-semibold">1.</span> 업종·타깃·주제를 한 줄로 입력 (예: 1인 디자인 스튜디오, 소상공인 대상, 좋은 브리프 쓰는 법)</li>
+              <li><span className="text-accent font-semibold">2.</span> 보내면 브랜드 보이스로 5~8장 초안이 생성됩니다</li>
+              <li><span className="text-accent font-semibold">3.</span> 슬라이드 글자를 직접 눌러 수정</li>
+              <li><span className="text-accent font-semibold">4.</span> 상단 Export PNG로 내보내기</li>
+            </ol>
+            <p className="text-[11px] mt-4 pt-3 border-t border-border">
+              여러 장을 한 번에 기획하려면 좌상단 뒤로가기 → 시리즈 플래너를 이용하세요.
             </p>
           </div>
         )}

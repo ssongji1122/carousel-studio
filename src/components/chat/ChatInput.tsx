@@ -13,11 +13,10 @@ interface ChatInputProps {
 }
 
 const SUGGESTIONS = [
-  "Create a 5-slide carousel about...",
-  "Make the design more minimal",
-  "Change the accent color to blue",
-  "Add a call-to-action slide",
-  "Make the headings bigger",
+  "1인 디자인 스튜디오인데, 좋은 브리프 쓰는 법으로 6장 만들어줘",
+  "타깃은 소상공인. 무료 도구로 브랜드 컬러 정하는 법",
+  "3번 슬라이드를 더 짧게 다듬어줘",
+  "마지막에 신청 유도 CTA 슬라이드 추가해줘",
 ];
 
 export function ChatInput({ onSend, isStreaming, disabled, textareaRef: externalRef, onStop }: ChatInputProps) {
@@ -73,7 +72,9 @@ export function ChatInput({ onSend, isStreaming, disabled, textareaRef: external
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           placeholder={
-            isStreaming ? "AI is working..." : "Describe your carousel..."
+            isStreaming
+              ? "생성 중..."
+              : "업종 · 타깃 · 주제를 한 줄로. 예: 1인 디자인 스튜디오, 소상공인 대상, 좋은 브리프 쓰는 법"
           }
           disabled={isStreaming || disabled}
           rows={1}

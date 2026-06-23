@@ -20,6 +20,7 @@ export interface Slide {
   role: SlideRole;
   headline: string;
   body: string;
+  items: string[];
   media: MediaRef | null;
 }
 
@@ -51,10 +52,11 @@ export function emptyStructuredSlide(order: number): {
   role: SlideRole;
   headline: string;
   body: string;
+  items: string[];
   media: MediaRef | null;
   order: number;
 } {
-  return { role: "body", headline: "", body: "", media: null, order };
+  return { role: "body", headline: "", body: "", items: [], media: null, order };
 }
 
 export interface CarouselsData {

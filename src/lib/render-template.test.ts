@@ -7,7 +7,7 @@ const brand = STUDIO_SOLUTA_SEED;
 describe("renderSlideHtml", () => {
   it("renders headline text and brand background", () => {
     const html = renderSlideHtml(
-      { role: "hook", headline: "형태가 되는 생각", body: "", media: null },
+      { role: "hook", headline: "형태가 되는 생각", body: "", items: [], media: null },
       brand, "4:5"
     );
     expect(html).toContain("형태가 되는 생각");
@@ -19,7 +19,7 @@ describe("renderSlideHtml", () => {
   });
   it("includes an img tag when media present", () => {
     const html = renderSlideHtml(
-      { role: "body", headline: "h", body: "b",
+      { role: "body", headline: "h", body: "b", items: [],
         media: { type: "image", src: "assets/x.png", fit: "cover", source: "uploaded" } },
       brand, "4:5"
     );
@@ -28,7 +28,19 @@ describe("renderSlideHtml", () => {
   });
   it("uses body font weight >= 400 (no 300)", () => {
     const html = renderSlideHtml(
-      { role: "body", headline: "h", body: "본문", media: null }, brand, "4:5");
+      { role: "body", headline: "h", body: "본문", items: [], media: null }, brand, "4:5");
     expect(html).not.toMatch(/font-weight:\s*300/);
+  });
+  it("renders a numbered list when items are present", () => {
+    const html = renderSlideHtml(
+      { role: "body", headline: "3단계", body: "",
+        items: ["첫째 항목", "둘째 항목", "셋째 항목"], media: null },
+      brand, "4:5"
+    );
+    expect(html).toContain("첫째 항목");
+    expect(html).toContain("셋째 항목");
+    // numbered: zero-padded index marker
+    expect(html).toContain("01");
+    expect(html).toContain("03");
   });
 });

@@ -118,10 +118,18 @@ export default function DashboardPage() {
                 인스타·Threads 캐로셀을 브랜드 톤으로 한 번에
               </p>
             </div>
-            <Button onClick={() => setShowCreateDialog(true)} variant="accent">
-              <Plus className="h-4 w-4" />
-              New Carousel
-            </Button>
+            <div className="flex items-center gap-2">
+              <a
+                href="/plans"
+                className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-accent transition-colors"
+              >
+                시리즈로 기획
+              </a>
+              <Button onClick={() => setShowCreateDialog(true)} variant="accent">
+                <Plus className="h-4 w-4" />
+                새 캐로셀
+              </Button>
+            </div>
           </div>
 
           {/* Tabs */}

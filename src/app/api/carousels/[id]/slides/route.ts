@@ -13,7 +13,7 @@ export async function POST(
     const body = await request.json();
 
     // Structured input takes precedence over raw html
-    if (body.role !== undefined || body.headline !== undefined || body.body !== undefined) {
+    if (body.role !== undefined || body.headline !== undefined || body.body !== undefined || body.items !== undefined) {
       const carousel = await getCarousel(id);
       if (!carousel) {
         return NextResponse.json(
@@ -26,6 +26,7 @@ export async function POST(
         role: (body.role ?? "body") as SlideRole,
         headline: String(body.headline ?? ""),
         body: String(body.body ?? ""),
+        items: Array.isArray(body.items) ? body.items.map((x: unknown) => String(x)) : [],
         media: (body.media ?? null) as MediaRef | null,
       };
 
