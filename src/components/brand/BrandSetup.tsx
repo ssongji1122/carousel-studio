@@ -37,10 +37,36 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
     initialBrand || DEFAULT_BRAND
   );
   const [saving, setSaving] = useState(false);
+  const [docsText, setDocsText] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialBrand) setBrand(initialBrand);
   }, [initialBrand]);
+
+  const handleImport = useCallback(async () => {
+    if (!docsText.trim()) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const res = await fetch("/api/brand/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docs: docsText }),
+      });
+      if (!res.ok) {
+        setImportError("문서에서 브랜드를 읽지 못했습니다. 다시 시도해 주세요.");
+        return;
+      }
+      const imported = (await res.json()) as BrandConfig;
+      setBrand(imported);
+    } catch {
+      setImportError("네트워크 오류로 가져오지 못했습니다.");
+    } finally {
+      setImporting(false);
+    }
+  }, [docsText]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -115,6 +141,31 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
         <div className="px-6 py-4 min-h-[240px]">
           {step === 0 && (
             <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
+                <label className="text-sm font-medium">
+                  브랜드 문서로 자동 설정
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  brand.md · design.md · tokens.css 내용을 붙여넣으면 색·폰트·보이스를 자동으로 채웁니다.
+                </p>
+                <textarea
+                  value={docsText}
+                  onChange={(e) => setDocsText(e.target.value)}
+                  placeholder="여기에 브랜드 문서를 붙여넣으세요 (brand.md, design.md, tokens.css ...)"
+                  rows={5}
+                  className="w-full resize-none bg-surface border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                {importError && (
+                  <p className="text-xs text-destructive">{importError}</p>
+                )}
+                <Button
+                  onClick={handleImport}
+                  variant="accent"
+                  disabled={importing || !docsText.trim()}
+                >
+                  {importing ? "읽는 중..." : "문서에서 가져오기"}
+                </Button>
+              </div>
               <div>
                 <label className="text-sm font-medium">
                   What&apos;s your brand name?

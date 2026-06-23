@@ -36,6 +36,7 @@ export function renderSlideHtml(
   const darkBg = c.dark || "#181816";
   const accentDark = c.accentDark || c.accent;
   const paperMute = "rgba(245,244,240,0.66)";
+  const brandName = brand.name || "studio.soluta";
 
   const hasItems = Array.isArray(slide.items) && slide.items.length > 0;
   const layout = slide.role === "hook" ? "cover"
@@ -61,7 +62,7 @@ export function renderSlideHtml(
       <span style="flex:1;height:1px;background:${isDark ? "rgba(245,244,240,0.25)" : c.line};"></span>
     </div>`;
 
-  const footer = `<div style="position:absolute;left:8%;bottom:6%;font-family:'${mono}',monospace;font-size:${SIZE.footer}px;letter-spacing:0.12em;text-transform:uppercase;color:${subInk};">studio.soluta</div>`;
+  const footer = `<div style="position:absolute;left:8%;bottom:6%;font-family:'${mono}',monospace;font-size:${SIZE.footer}px;letter-spacing:0.12em;text-transform:uppercase;color:${subInk};">${escapeHtml(brandName)}</div>`;
 
   const headline = (size: number) =>
     `<div style="font-family:${headFont};font-weight:700;font-size:${size}px;line-height:1.12;letter-spacing:-0.01em;word-break:keep-all;color:${ink};">${escapeHtml(slide.headline)}</div>`;
@@ -73,7 +74,7 @@ export function renderSlideHtml(
 
   let inner = "";
   if (layout === "cover") {
-    inner = `${eyebrowRow("studio.soluta")}${headline(SIZE.coverHead)}${bodyHtml(subInk)}`;
+    inner = `${eyebrowRow(brandName)}${headline(SIZE.coverHead)}${bodyHtml(subInk)}`;
   } else if (layout === "list") {
     const lis = slide.items.map((it, i) =>
       `<div style="display:flex;gap:26px;align-items:baseline;border-top:1px solid ${c.line};padding-top:16px;">
