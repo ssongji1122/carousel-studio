@@ -1,12 +1,12 @@
 import { readDataSafe, writeData } from "./data";
 import { now } from "./utils";
 import type { BrandConfig } from "@/types/brand";
-import { DEFAULT_BRAND } from "@/types/brand";
+import { STUDIO_SOLUTA_SEED } from "./brand-seed";
 
 const FILE = "brand.json";
 
 export async function getBrand(): Promise<BrandConfig> {
-  return readDataSafe<BrandConfig>(FILE, DEFAULT_BRAND);
+  return readDataSafe<BrandConfig>(FILE, STUDIO_SOLUTA_SEED);
 }
 
 export async function updateBrand(

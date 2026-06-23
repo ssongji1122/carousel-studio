@@ -4,11 +4,19 @@ export interface BrandColors {
   accent: string;
   background: string;
   surface: string;
+  line: string;
 }
 
 export interface BrandFonts {
   heading: string;
   body: string;
+  mono?: string;
+}
+
+export interface BrandVoice {
+  ending: string;
+  banned: string[];
+  keywords: string[];
 }
 
 export interface CustomFont {
@@ -23,6 +31,7 @@ export interface BrandConfig {
   customFonts: CustomFont[];
   logoPath: string | null;
   styleKeywords: string[];
+  voice: BrandVoice;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,6 +44,7 @@ export const DEFAULT_BRAND: BrandConfig = {
     accent: "#e94560",
     background: "#ffffff",
     surface: "#f5f5f5",
+    line: "#E5E1D8",
   },
   fonts: {
     heading: "Inter",
@@ -43,6 +53,7 @@ export const DEFAULT_BRAND: BrandConfig = {
   customFonts: [],
   logoPath: null,
   styleKeywords: [],
+  voice: { ending: "합니다체", banned: [], keywords: [] },
   createdAt: "",
   updatedAt: "",
 };
