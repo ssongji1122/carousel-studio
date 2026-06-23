@@ -98,7 +98,8 @@ export async function deleteCarousel(id: string): Promise<boolean> {
 export async function addSlide(
   carouselId: string,
   html: string,
-  notes = ""
+  notes = "",
+  structured?: Partial<Pick<Slide, "role" | "headline" | "body" | "media">>
 ): Promise<Slide | null> {
   const data = await load();
   const carousel = data.carousels.find((c) => c.id === carouselId);
@@ -111,10 +112,10 @@ export async function addSlide(
     previousVersions: [],
     order: carousel.slides.length,
     notes,
-    role: "body",
-    headline: "",
-    body: "",
-    media: null,
+    role: structured?.role ?? "body",
+    headline: structured?.headline ?? "",
+    body: structured?.body ?? "",
+    media: structured?.media ?? null,
   };
   carousel.slides.push(slide);
   carousel.updatedAt = now();
@@ -125,7 +126,7 @@ export async function addSlide(
 export async function updateSlide(
   carouselId: string,
   slideId: string,
-  updates: Partial<Pick<Slide, "html" | "notes">>
+  updates: Partial<Pick<Slide, "html" | "notes" | "role" | "headline" | "body" | "media">>
 ): Promise<Slide | null> {
   const data = await load();
   const carousel = data.carousels.find((c) => c.id === carouselId);

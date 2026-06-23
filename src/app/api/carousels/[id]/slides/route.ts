@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { addSlide, reorderSlides, getCarousel } from "@/lib/carousels";
+import { getBrand } from "@/lib/brand";
+import { buildSlideFromStructured } from "@/lib/slide-build";
+import type { SlideRole, MediaRef } from "@/types/carousel";
 
 export async function POST(
   request: Request,
@@ -8,8 +11,44 @@ export async function POST(
   const { id } = await params;
   try {
     const body = await request.json();
-    const { html, notes } = body as { html?: string; notes?: string };
 
+    // Structured input takes precedence over raw html
+    if (body.role !== undefined || body.headline !== undefined || body.body !== undefined) {
+      const carousel = await getCarousel(id);
+      if (!carousel) {
+        return NextResponse.json(
+          { error: "Carousel not found" },
+          { status: 404 }
+        );
+      }
+
+      const structured = {
+        role: (body.role ?? "body") as SlideRole,
+        headline: String(body.headline ?? ""),
+        body: String(body.body ?? ""),
+        media: (body.media ?? null) as MediaRef | null,
+      };
+
+      const brand = await getBrand();
+      const { html, violations } = buildSlideFromStructured(
+        structured,
+        brand,
+        carousel.aspectRatio
+      );
+
+      const notes = typeof body.notes === "string" ? body.notes : "";
+      const slide = await addSlide(id, html, notes, structured);
+      if (!slide) {
+        return NextResponse.json(
+          { error: "Carousel not found or max slides reached" },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({ ...slide, violations }, { status: 201 });
+    }
+
+    // Backward-compat: raw html path
+    const { html, notes } = body as { html?: string; notes?: string };
     if (!html || typeof html !== "string") {
       return NextResponse.json(
         { error: "HTML content is required" },

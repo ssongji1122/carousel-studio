@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { updateSlide, deleteSlide } from "@/lib/carousels";
+import { updateSlide, deleteSlide, getCarousel } from "@/lib/carousels";
+import { getBrand } from "@/lib/brand";
+import { buildSlideFromStructured } from "@/lib/slide-build";
+import type { SlideRole, MediaRef } from "@/types/carousel";
 
 export async function PUT(
   request: Request,
@@ -8,6 +11,47 @@ export async function PUT(
   const { id, slideId } = await params;
   try {
     const body = await request.json();
+
+    // Re-render when structured fields are being updated
+    if (body.role !== undefined || body.headline !== undefined || body.body !== undefined || body.media !== undefined) {
+      const carousel = await getCarousel(id);
+      if (!carousel) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      const existing = carousel.slides.find((s) => s.id === slideId);
+      if (!existing) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      const structured = {
+        role: (body.role ?? existing.role) as SlideRole,
+        headline: String(body.headline ?? existing.headline),
+        body: String(body.body ?? existing.body),
+        media: (body.media !== undefined ? body.media : existing.media) as MediaRef | null,
+      };
+
+      const brand = await getBrand();
+      const { html, violations } = buildSlideFromStructured(
+        structured,
+        brand,
+        carousel.aspectRatio
+      );
+
+      const updates = {
+        ...structured,
+        html,
+        ...(typeof body.notes === "string" ? { notes: body.notes } : {}),
+      };
+
+      const slide = await updateSlide(id, slideId, updates);
+      if (!slide) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+      return NextResponse.json({ ...slide, violations });
+    }
+
+    // Backward-compat: raw updates (html/notes only)
     const slide = await updateSlide(id, slideId, body);
     if (!slide) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

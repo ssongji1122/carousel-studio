@@ -35,7 +35,7 @@ ${(carousel.referenceImages?.length ?? 0) > 0 ? `\n## Reference images (use Read
 Follow these design rules for ALL slides:
 ${stylePreset.designRules}
 
-${stylePreset.exampleSlideHtml ? `Example slide HTML for reference:\n\`\`\`html\n${stylePreset.exampleSlideHtml.substring(0, 500)}\n\`\`\`` : ""}`
+${stylePreset.exampleSlideHtml ? `Structured example slide that matches this preset:\n\`\`\`json\n{"role":"body","headline":"헤드라인 예시","body":"본문 예시"}\n\`\`\`` : ""}`
     : "";
 
   const v = brand.voice;
