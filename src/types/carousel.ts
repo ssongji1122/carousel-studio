@@ -1,4 +1,15 @@
 export type AspectRatio = "1:1" | "4:5" | "9:16";
+export type SlideRole = "hook" | "body" | "cta";
+export type Channel = "instagram" | "threads";
+
+export interface MediaRef {
+  type: "image" | "video";
+  src: string;
+  fit: "cover" | "contain";
+  source: "generated" | "uploaded";
+  provider?: string;
+  prompt?: string;
+}
 
 export interface Slide {
   id: string;
@@ -6,6 +17,10 @@ export interface Slide {
   previousVersions: string[];
   order: number;
   notes: string;
+  role: SlideRole;
+  headline: string;
+  body: string;
+  media: MediaRef | null;
 }
 
 export interface ReferenceImage {
@@ -20,6 +35,7 @@ export interface Carousel {
   id: string;
   name: string;
   aspectRatio: AspectRatio;
+  channel: Channel;
   slides: Slide[];
   referenceImages: ReferenceImage[];
   caption?: string;
@@ -29,6 +45,16 @@ export interface Carousel {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export function emptyStructuredSlide(order: number): {
+  role: SlideRole;
+  headline: string;
+  body: string;
+  media: MediaRef | null;
+  order: number;
+} {
+  return { role: "body", headline: "", body: "", media: null, order };
 }
 
 export interface CarouselsData {

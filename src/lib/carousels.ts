@@ -32,6 +32,7 @@ export async function createCarousel(
     id: generateId(),
     name,
     aspectRatio,
+    channel: "instagram",
     slides: [],
     referenceImages: [],
     chatSessionId: null,
@@ -110,6 +111,10 @@ export async function addSlide(
     previousVersions: [],
     order: carousel.slides.length,
     notes,
+    role: "body",
+    headline: "",
+    body: "",
+    media: null,
   };
   carousel.slides.push(slide);
   carousel.updatedAt = now();
