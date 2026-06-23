@@ -46,19 +46,29 @@ export function wrapSlideHtml(
   const { width, height } = DIMENSIONS[aspectRatio];
   const fontFamilies = extractFontFamilies(slideHtml);
 
+  // Pretendard is not on Google Fonts; detect via direct text search for robustness
+  // (the font-family regex may not capture it when followed by a comma in fallback lists)
+  const usesPretendard = /pretendard/i.test(slideHtml);
+  const googleFamilies = fontFamilies.filter((f) => !/pretendard/i.test(f));
+  const pretendardLink = usesPretendard
+    ? `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">`
+    : "";
+
   let fontBlock = "";
   if (options?.inlineFontCss) {
     // For export: use inlined base64 @font-face CSS
-    fontBlock = `<style>${options.inlineFontCss}</style>`;
-  } else if (fontFamilies.length > 0) {
-    // For preview: use Google Fonts CDN link
-    const params = fontFamilies
+    fontBlock = `<style>${options.inlineFontCss}</style>${pretendardLink}`;
+  } else if (googleFamilies.length > 0) {
+    // For preview: use Google Fonts CDN link (Pretendard is not on Google Fonts)
+    const params = googleFamilies
       .map(
         (f) =>
           `family=${encodeURIComponent(f)}:wght@300;400;500;600;700;800`
       )
       .join("&");
-    fontBlock = `<link href="https://fonts.googleapis.com/css2?${params}&display=swap" rel="stylesheet">`;
+    fontBlock = `<link href="https://fonts.googleapis.com/css2?${params}&display=swap" rel="stylesheet">${pretendardLink}`;
+  } else {
+    fontBlock = pretendardLink;
   }
 
   return `<!DOCTYPE html>
