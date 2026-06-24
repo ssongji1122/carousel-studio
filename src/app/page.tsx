@@ -13,6 +13,7 @@ import { SlideRenderer } from "@/components/editor/SlideRenderer";
 import { TemplateGallery } from "@/components/templates/TemplateGallery";
 import type { Carousel } from "@/types/carousel";
 import type { BrandConfig } from "@/types/brand";
+import type { Project } from "@/types/project";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -20,22 +21,70 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showBrandSetup, setShowBrandSetup] = useState(false);
   const [brand, setBrand] = useState<BrandConfig | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string>("");
 
-  useEffect(() => {
-    Promise.all([
+  // Load the carousels + brand for whichever project is active.
+  // Callers that run outside an effect (event handlers) set `loading` first.
+  const loadProjectData = useCallback((openSetupIfEmpty: boolean) => {
+    return Promise.all([
       fetch("/api/carousels").then((r) => r.json()),
       fetch("/api/brand").then((r) => r.json()),
     ])
       .then(([carouselData, brandData]) => {
         setCarousels(carouselData.carousels || []);
         setBrand(brandData);
-        if (!brandData.name || brandData.name.trim() === "") {
+        if (openSetupIfEmpty && (!brandData.name || brandData.name.trim() === "")) {
           setShowBrandSetup(true);
         }
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetch("/api/workspace")
+      .then((r) => r.json())
+      .then((ws) => {
+        setProjects(ws.projects || []);
+        setActiveProjectId(ws.activeProjectId || "");
+      })
+      .catch(() => {});
+    loadProjectData(true);
+  }, [loadProjectData]);
+
+  const handleSwitchProject = useCallback(
+    async (projectId: string) => {
+      const res = await fetch("/api/workspace", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activeProjectId: projectId }),
+      });
+      if (res.ok) {
+        const ws = await res.json();
+        setProjects(ws.projects || []);
+        setActiveProjectId(ws.activeProjectId || projectId);
+        setLoading(true);
+        await loadProjectData(false);
+      }
+    },
+    [loadProjectData]
+  );
+
+  const handleCreateProject = useCallback(
+    async (name: string) => {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (res.ok) {
+        const project: Project = await res.json();
+        await handleSwitchProject(project.id);
+      }
+    },
+    [handleSwitchProject]
+  );
 
   const [confirmState, setConfirmState] = useState<{
     open: boolean;
@@ -79,7 +128,13 @@ export default function DashboardPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <TopBar onSettingsClick={() => setShowBrandSetup(true)} />
+      <TopBar
+        onSettingsClick={() => setShowBrandSetup(true)}
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onSwitchProject={handleSwitchProject}
+        onCreateProject={handleCreateProject}
+      />
 
       <ConfirmDialog
         open={confirmState.open}
