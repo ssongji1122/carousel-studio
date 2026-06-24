@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import path from "path";
 import { addReferenceImage, removeReferenceImage, getCarousel } from "@/lib/carousels";
 import { generateId, now } from "@/lib/utils";
+import { extractPaletteFromFile } from "@/lib/instagram-brand";
+
+export const runtime = "nodejs";
 
 export async function GET(
   _request: Request,
@@ -30,12 +33,17 @@ export async function POST(
 
     const absPath = path.resolve(process.cwd(), "public", url.replace(/^\//, ""));
 
+    // Extract the reference's colors so the user sees what we pulled and Claude
+    // can use them as this carousel's accent/palette (brand defaults untouched).
+    const palette = await extractPaletteFromFile(absPath);
+
     const ref = {
       id: generateId(),
       url,
       absPath,
       name: name || "Reference image",
       addedAt: now(),
+      palette,
     };
 
     const result = await addReferenceImage(id, ref);

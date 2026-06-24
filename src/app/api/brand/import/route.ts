@@ -43,7 +43,11 @@ export async function POST(request: NextRequest) {
       let siteUrl = website;
       if (instagram) {
         const profile = await fetchInstagramProfile(instagram);
-        const palette = await extractPalette(profileImageUrls(profile));
+        const palette = await extractPalette(
+          profileImageUrls(profile),
+          6,
+          profile.profilePicUrl ?? undefined
+        );
         sources.ig = { profile, palette };
         // No website given? Discover the official site from the profile's
         // bio links (unwrapping IG redirects and litt.ly aggregators).
