@@ -13,8 +13,9 @@ async function save(data: PlansData): Promise<void> {
   await writeData(FILE, data);
 }
 
-export async function listPlans(): Promise<Plan[]> {
-  return (await load()).plans;
+export async function listPlans(projectId?: string): Promise<Plan[]> {
+  const plans = (await load()).plans;
+  return projectId ? plans.filter((p) => p.projectId === projectId) : plans;
 }
 
 export async function getPlan(id: string): Promise<Plan | null> {
@@ -22,13 +23,14 @@ export async function getPlan(id: string): Promise<Plan | null> {
 }
 
 export async function createPlan(
+  projectId: string,
   brief: { scope: string; target: string },
   channel: Channel,
   count: number
 ): Promise<Plan> {
   const data = await load();
   const plan: Plan = {
-    id: generateId(), brief, channel, count,
+    id: generateId(), projectId, brief, channel, count,
     pillars: [], items: [], createdAt: now(), updatedAt: now(),
   };
   data.plans.push(plan);

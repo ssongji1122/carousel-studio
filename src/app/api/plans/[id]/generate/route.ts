@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 import crossSpawn from "cross-spawn";
 import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
 import { getPlan } from "@/lib/plans";
-import { getBrand } from "@/lib/brand";
+import { resolveBrandForPlan } from "@/lib/resolve-brand";
 import { buildPlannerPrompt } from "@/lib/plan-system-prompt";
 
 export const runtime = "nodejs";
@@ -25,7 +25,7 @@ export async function POST(
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   }
 
-  const brand = await getBrand();
+  const brand = await resolveBrandForPlan(id);
   const prompt = buildPlannerPrompt(brand, plan);
 
   const claudePath = getClaudePath();

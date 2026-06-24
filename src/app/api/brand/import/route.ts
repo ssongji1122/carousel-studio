@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import crossSpawn from "cross-spawn";
 import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
-import { getBrand } from "@/lib/brand";
+import { resolveActiveBrand } from "@/lib/resolve-brand";
 import { buildBrandImportPrompt } from "@/lib/brand-import-prompt";
 import { fetchInstagramProfile, extractPalette, profileImageUrls } from "@/lib/instagram-brand";
 import { fetchWebsiteSignals, resolveBrandWebsite } from "@/lib/website-brand";
@@ -117,6 +117,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Brand import failed" }, { status: 502 });
   }
 
-  const updated = await getBrand();
+  const updated = await resolveActiveBrand();
   return NextResponse.json({ ...updated, extractedPalette });
 }

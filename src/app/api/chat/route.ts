@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 import crossSpawn from "cross-spawn";
 import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
 import { buildSystemPrompt } from "@/lib/chat-system-prompt";
-import { getBrand } from "@/lib/brand";
+import { resolveBrandForCarousel, resolveActiveBrand } from "@/lib/resolve-brand";
 import { getCarousel } from "@/lib/carousels";
 import { getPreset } from "@/lib/style-presets";
 
@@ -45,8 +45,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid message" }, { status: 400 });
   }
 
-  // Build dynamic system prompt with current brand + carousel + style preset context
-  const brand = await getBrand();
+  // Build dynamic system prompt with current brand + carousel + style preset context.
+  // Brand is resolved from the carousel's project so a sample's tone never bleeds
+  // into another project's generation.
+  const brand = carouselId
+    ? await resolveBrandForCarousel(carouselId)
+    : await resolveActiveBrand();
   const carousel = carouselId ? await getCarousel(carouselId) : null;
   const stylePreset = stylePresetId ? await getPreset(stylePresetId) : null;
   const systemPrompt = buildSystemPrompt(brand, carousel, stylePreset);

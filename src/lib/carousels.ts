@@ -13,9 +13,11 @@ async function save(data: CarouselsData): Promise<void> {
   await writeData(FILE, data);
 }
 
-export async function listCarousels(): Promise<Carousel[]> {
+export async function listCarousels(projectId?: string): Promise<Carousel[]> {
   const data = await load();
-  return data.carousels.filter((c) => !c.isTemplate);
+  return data.carousels.filter(
+    (c) => !c.isTemplate && (!projectId || c.projectId === projectId)
+  );
 }
 
 export async function getCarousel(id: string): Promise<Carousel | null> {
@@ -24,12 +26,16 @@ export async function getCarousel(id: string): Promise<Carousel | null> {
 }
 
 export async function createCarousel(
+  projectId: string,
   name: string,
-  aspectRatio: AspectRatio
+  aspectRatio: AspectRatio,
+  brandId?: string
 ): Promise<Carousel> {
   const data = await load();
   const carousel: Carousel = {
     id: generateId(),
+    projectId,
+    brandId,
     name,
     aspectRatio,
     channel: "instagram",

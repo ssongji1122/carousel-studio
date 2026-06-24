@@ -12,9 +12,12 @@ async function save(data: StylePresetsData): Promise<void> {
   await writeData(FILE, data);
 }
 
-export async function listPresets(): Promise<StylePreset[]> {
+export async function listPresets(projectId?: string): Promise<StylePreset[]> {
   const data = await load();
-  return data.presets;
+  if (!projectId) return data.presets;
+  return data.presets.filter(
+    (p) => p.projectId === projectId || p.scope === "shared"
+  );
 }
 
 export async function getPreset(id: string): Promise<StylePreset | null> {

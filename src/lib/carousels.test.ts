@@ -22,7 +22,7 @@ describe("createCarousel", () => {
   });
 
   it("defaults channel to instagram", async () => {
-    const c = await createCarousel("Test", "4:5");
+    const c = await createCarousel("studio-soluta", "Test", "4:5");
     expect(c.channel).toBe("instagram");
   });
 });
@@ -33,7 +33,7 @@ describe("updateCarousel channel patch", () => {
   });
 
   it("accepts channel patch and persists threads", async () => {
-    const c = await createCarousel("Test", "4:5");
+    const c = await createCarousel("studio-soluta", "Test", "4:5");
     const updated = await updateCarousel(c.id, { channel: "threads" });
     expect(updated?.channel).toBe("threads");
   });

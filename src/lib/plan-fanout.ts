@@ -10,7 +10,7 @@ export async function fanoutPlan(plan: Plan, aspect: AspectRatio = "4:5"): Promi
       items.push(item);
       continue;
     }
-    const carousel = await createCarousel(item.topic, aspect);
+    const carousel = await createCarousel(plan.projectId, item.topic, aspect, plan.brandId);
     await updateCarousel(carousel.id, { channel: plan.channel, tags: [item.pillar] });
     items.push({ ...item, status: "created", carouselId: carousel.id });
   }

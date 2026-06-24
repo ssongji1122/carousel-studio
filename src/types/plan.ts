@@ -12,6 +12,8 @@ export interface PlanItem {
 
 export interface Plan {
   id: string;
+  projectId: string;
+  brandId?: string;
   brief: { scope: string; target: string };
   channel: Channel;
   count: number;

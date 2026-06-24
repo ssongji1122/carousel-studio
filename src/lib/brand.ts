@@ -1,18 +1,36 @@
 import { readDataSafe, writeData } from "./data";
 import { now } from "./utils";
 import type { BrandConfig } from "@/types/brand";
-import { STUDIO_SOLUTA_SEED } from "./brand-seed";
+import { STUDIO_SOLUTA_SEED, blankBrandTemplate } from "./brand-seed";
 
-const FILE = "brand.json";
+// Brands are stored per project in a single map keyed by projectId. This keeps
+// each project's brand isolated so one brand's tone never bleeds into another's
+// generation. (v1: one brand per project; brandId reserved for later.)
+const FILE = "brands.json";
 
-export async function getBrand(): Promise<BrandConfig> {
-  return readDataSafe<BrandConfig>(FILE, STUDIO_SOLUTA_SEED);
+type BrandsData = Record<string, BrandConfig>;
+
+async function load(): Promise<BrandsData> {
+  return readDataSafe<BrandsData>(FILE, {});
+}
+
+function seedFor(projectId: string): BrandConfig {
+  return projectId === "studio-soluta"
+    ? { ...STUDIO_SOLUTA_SEED }
+    : blankBrandTemplate();
+}
+
+export async function getBrand(projectId: string): Promise<BrandConfig> {
+  const data = await load();
+  return data[projectId] ?? seedFor(projectId);
 }
 
 export async function updateBrand(
+  projectId: string,
   updates: Partial<Omit<BrandConfig, "createdAt" | "updatedAt">>
 ): Promise<BrandConfig> {
-  const current = await getBrand();
+  const data = await load();
+  const current = data[projectId] ?? seedFor(projectId);
   const updated: BrandConfig = {
     ...current,
     ...updates,
@@ -21,7 +39,8 @@ export async function updateBrand(
     updatedAt: now(),
     createdAt: current.createdAt || now(),
   };
-  await writeData(FILE, updated);
+  data[projectId] = updated;
+  await writeData(FILE, data);
   return updated;
 }
 

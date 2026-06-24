@@ -3,6 +3,8 @@ import type { BrandConfig } from "./brand";
 
 export interface StylePreset {
   id: string;
+  projectId: string;
+  scope?: "project" | "shared";
   name: string;
   description: string;
   brand: BrandConfig;

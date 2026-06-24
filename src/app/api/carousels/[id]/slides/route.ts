@@ -35,7 +35,7 @@ export async function POST(
         tone: asTone(body.tone),
       };
 
-      const brand = await getBrand();
+      const brand = await getBrand(carousel.projectId);
       const { html, violations } = buildSlideFromStructured(
         structured,
         brand,

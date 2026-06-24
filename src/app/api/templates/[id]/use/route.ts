@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTemplate } from "@/lib/templates";
 import { createCarousel, addSlide } from "@/lib/carousels";
+import { getActiveProjectId } from "@/lib/workspace";
 
 export async function POST(
   _request: Request,
@@ -12,8 +13,10 @@ export async function POST(
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
-  // Create new carousel from template
+  // Create new carousel from template, scoped to the active project
+  const projectId = await getActiveProjectId();
   const carousel = await createCarousel(
+    projectId,
     `${template.name} (from template)`,
     template.aspectRatio
   );

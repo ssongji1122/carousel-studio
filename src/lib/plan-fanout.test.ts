@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 const created: string[] = [];
 vi.mock("@/lib/carousels", () => ({
-  createCarousel: vi.fn(async (name: string) => {
+  createCarousel: vi.fn(async (_projectId: string, name: string) => {
     const cid = "car-" + created.length;
     created.push(name);
     return { id: cid, name };

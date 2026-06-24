@@ -38,6 +38,8 @@ export interface ReferenceImage {
 
 export interface Carousel {
   id: string;
+  projectId: string;
+  brandId?: string;
   name: string;
   aspectRatio: AspectRatio;
   channel: Channel;
