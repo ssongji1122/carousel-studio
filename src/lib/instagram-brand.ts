@@ -111,19 +111,22 @@ export async function fetchInstagramProfile(handle: string): Promise<IgProfile> 
 
 type Bucket = { n: number; r: number; g: number; b: number };
 
-/** Accumulate a raw RGB(A) buffer into a shared bucket map. `bits` per channel. */
+/** Accumulate a raw RGB(A) buffer into a shared bucket map. `bits` per channel.
+ * `weight` lets a source count more than 1 per pixel — the logo (profile pic)
+ * is the brand's core color and should dominate over incidental feed pixels. */
 function accumulateBuckets(
   raw: Uint8Array | Buffer,
   channels: number,
   map: Map<number, Bucket>,
-  bits = 4
+  bits = 4,
+  weight = 1
 ): void {
   const shift = 8 - bits;
   for (let i = 0; i + channels - 1 < raw.length; i += channels) {
     const r = raw[i], g = raw[i + 1], b = raw[i + 2];
     const key = ((r >> shift) << (2 * bits)) | ((g >> shift) << bits) | (b >> shift);
     const acc = map.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
-    acc.n++; acc.r += r; acc.g += g; acc.b += b;
+    acc.n += weight; acc.r += r * weight; acc.g += g * weight; acc.b += b * weight;
     map.set(key, acc);
   }
 }
@@ -177,37 +180,66 @@ export function dominantColorsFromRaw(
   return topColors(map, maxColors);
 }
 
-/**
- * Download images and extract a merged dominant palette via sharp. All images'
- * pixels accumulate into one bucket map so a brand's recurring colors win,
- * then distinct top colors are returned (ink, accent, paper).
- */
-export async function extractPalette(imageUrls: string[], maxColors = 6): Promise<string[]> {
-  const map = new Map<number, Bucket>();
-  const urls = imageUrls.filter(Boolean).slice(0, 6);
-  await Promise.all(
-    urls.map(async (url) => {
-      try {
-        const res = await fetch(url, { headers: IG_HEADERS });
-        if (!res.ok) return;
-        const buf = Buffer.from(await res.arrayBuffer());
-        const { data, info } = await sharp(buf)
-          .resize(100, 100, { fit: "cover" })
-          .raw()
-          .toBuffer({ resolveWithObject: true });
-        accumulateBuckets(data, info.channels, map);
-      } catch {
-        // skip unreadable image
-      }
-    })
-  );
-  return topColors(map, maxColors);
+async function accumulateImage(
+  url: string,
+  map: Map<number, Bucket>,
+  weight: number
+): Promise<void> {
+  try {
+    const res = await fetch(url, { headers: IG_HEADERS });
+    if (!res.ok) return;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const { data, info } = await sharp(buf)
+      .resize(100, 100, { fit: "cover" })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    accumulateBuckets(data, info.channels, map, 4, weight);
+  } catch {
+    // skip unreadable image
+  }
 }
 
-/** All representative image URLs for palette extraction (posts + profile pic). */
+const hexToRgb = (h: string): RGB => ({
+  r: parseInt(h.slice(1, 3), 16),
+  g: parseInt(h.slice(3, 5), 16),
+  b: parseInt(h.slice(5, 7), 16),
+});
+
+/**
+ * Download images and extract a brand palette via sharp. The logo (profile
+ * pic) carries the brand's core color, so its dominant colors lead the palette;
+ * the feed then contributes the working neutrals (ink, paper). This way a pink
+ * logo's pink leads while the feed's charcoal ink and white still survive —
+ * neither source drowns the other. Near-duplicates are merged, logo first.
+ */
+export async function extractPalette(
+  imageUrls: string[],
+  maxColors = 6,
+  logoUrl?: string
+): Promise<string[]> {
+  const picks: string[] = [];
+  if (logoUrl) {
+    const logoMap = new Map<number, Bucket>();
+    await accumulateImage(logoUrl, logoMap, 1);
+    picks.push(...topColors(logoMap, 2)); // brand core color(s)
+  }
+  const feedMap = new Map<number, Bucket>();
+  const urls = imageUrls.filter(Boolean).slice(0, 6);
+  await Promise.all(urls.map((url) => accumulateImage(url, feedMap, 1)));
+  picks.push(...topColors(feedMap, maxColors)); // working neutrals + accents
+
+  const out: string[] = [];
+  for (const hex of picks) {
+    if (out.length >= maxColors) break;
+    if (!tooClose(out.map(hexToRgb), hexToRgb(hex))) out.push(hex);
+  }
+  return out;
+}
+
+/** Feed image URLs for palette extraction (the logo is passed separately so it
+ * can be weighted as the brand's core color). */
 export function profileImageUrls(profile: IgProfile): string[] {
   return [
     ...profile.posts.map((p) => p.imageUrl).filter((u): u is string => !!u),
-    ...(profile.profilePicUrl ? [profile.profilePicUrl] : []),
   ];
 }
