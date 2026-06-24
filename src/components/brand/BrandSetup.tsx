@@ -43,6 +43,9 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
   const [igHandle, setIgHandle] = useState("");
   const [webUrl, setWebUrl] = useState("");
   const [importingIg, setImportingIg] = useState(false);
+  const [extractedPalette, setExtractedPalette] = useState<string[]>([]);
+  const [paletteTarget, setPaletteTarget] =
+    useState<"accent" | "background" | "primary" | "surface">("accent");
 
   useEffect(() => {
     if (initialBrand) setBrand(initialBrand);
@@ -91,7 +94,9 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
         );
         return;
       }
-      setBrand((await res.json()) as BrandConfig);
+      const imported = (await res.json()) as BrandConfig & { extractedPalette?: string[] };
+      setBrand(imported);
+      if (imported.extractedPalette?.length) setExtractedPalette(imported.extractedPalette);
     } catch {
       setImportError("네트워크 오류로 가져오지 못했습니다.");
     } finally {
@@ -253,6 +258,47 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
 
           {step === 1 && (
             <div className="space-y-3">
+              {extractedPalette.length > 0 && (
+                <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-medium">추출된 색에서 고르기</label>
+                    <div className="flex gap-1">
+                      {(["accent", "background", "primary", "surface"] as const).map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setPaletteTarget(t)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                            paletteTarget === t
+                              ? "bg-accent text-accent-foreground"
+                              : "bg-muted text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    칩을 누르면 선택한 역할(<span className="font-mono">{paletteTarget}</span>)에 그 색이 적용됩니다.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {extractedPalette.map((hex) => (
+                      <button
+                        key={hex}
+                        title={`${hex} → ${paletteTarget}`}
+                        onClick={() =>
+                          setBrand({
+                            ...brand,
+                            colors: { ...brand.colors, [paletteTarget]: hex },
+                          })
+                        }
+                        className="h-7 w-7 rounded-md border border-border shadow-sm cursor-pointer transition-transform hover:scale-110"
+                        style={{ backgroundColor: hex }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
               <ColorPicker
                 label="Primary"
                 value={brand.colors.primary}
