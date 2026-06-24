@@ -128,23 +128,39 @@ function accumulateBuckets(
   }
 }
 
+type RGB = { r: number; g: number; b: number };
+const rgbSaturation = (c: RGB) => {
+  const mx = Math.max(c.r, c.g, c.b), mn = Math.min(c.r, c.g, c.b);
+  return mx === 0 ? 0 : (mx - mn) / mx;
+};
+const tooClose = (picked: RGB[], c: RGB) =>
+  picked.some((p) => Math.abs(p.r - c.r) + Math.abs(p.g - c.g) + Math.abs(p.b - c.b) < 48);
+
 /**
- * Pick the top-N most-distinct dominant colors from a bucket map, averaging
- * each bucket's members. Near-duplicate hues are merged so the palette spans
- * the image's range (ink/accent/paper) instead of collapsing to one mid-gray.
+ * Pick the most representative colors from a bucket map. We take the dominant
+ * colors by area (paper/ink) AND the most saturated colors (the brand accent),
+ * because a brand's signature color is often a small-area pop (a pink garment
+ * on a neutral lookbook) that pure frequency would drop. Distinct only.
  */
 function topColors(map: Map<number, Bucket>, maxColors: number): string[] {
-  const ranked = Array.from(map.values())
-    .sort((a, b) => b.n - a.n)
-    .map(({ n, r, g, b }) => ({ r: r / n, g: g / n, b: b / n }));
-  const picked: { r: number; g: number; b: number }[] = [];
-  for (const c of ranked) {
+  const items = Array.from(map.values()).map(({ n, r, g, b }) => ({
+    n, r: r / n, g: g / n, b: b / n,
+  }));
+  const byArea = [...items].sort((a, b) => b.n - a.n);
+  const bySat = items
+    .filter((c) => rgbSaturation(c) > 0.2)
+    .sort((a, b) => rgbSaturation(b) - rgbSaturation(a));
+
+  const picked: RGB[] = [];
+  // ~60% area-dominant (background, ink), then fill with saturated accents.
+  const areaQuota = Math.max(1, Math.ceil(maxColors * 0.6));
+  for (const c of byArea) {
+    if (picked.length >= areaQuota) break;
+    if (!tooClose(picked, c)) picked.push(c);
+  }
+  for (const c of bySat) {
     if (picked.length >= maxColors) break;
-    // keep colors that are not too close (Euclidean) to an already-picked one
-    const tooClose = picked.some(
-      (p) => Math.abs(p.r - c.r) + Math.abs(p.g - c.g) + Math.abs(p.b - c.b) < 48
-    );
-    if (!tooClose) picked.push(c);
+    if (!tooClose(picked, c)) picked.push(c);
   }
   const to = (x: number) => Math.round(x).toString(16).padStart(2, "0");
   return picked.map((c) => `#${to(c.r)}${to(c.g)}${to(c.b)}`.toUpperCase());

@@ -40,20 +40,23 @@ describe("extractBrandFonts", () => {
 });
 
 describe("extractBrandColors", () => {
-  it("drops WordPress/builder default palette colors", () => {
-    const css = "a{color:#FF6900}b{color:#2D3536}b2{color:#2D3536}c{color:#FFFFFF}";
+  it("takes declared brand custom properties, not every incidental hex", () => {
+    const css = ":root{--brand-color:#2D3536;--accent-point:#FF8CB4}.sale{background:#FF0000}";
     const colors = extractBrandColors(css);
-    expect(colors).toContain("#2D3536"); // real brand color survives
-    expect(colors).not.toContain("#FF6900"); // gutenberg default removed
-    expect(colors).not.toContain("#FFFFFF"); // noise removed
+    expect(colors).toContain("#2D3536"); // declared brand var
+    expect(colors).toContain("#FF8CB4"); // declared accent var
+    expect(colors).not.toContain("#FF0000"); // incidental shop-chrome red, ignored
   });
 
-  it("keeps a low-frequency saturated brand color over high-frequency gray", () => {
-    // gray repeated many times, pink only twice — pink must still survive
-    const css = "x{color:#555555}".repeat(20) + "y{color:#FF8CB4}z{color:#FF8CB4}";
-    const colors = extractBrandColors(css);
-    expect(colors).toContain("#FF8CB4"); // accent pink kept via saturation
-    expect(colors).toContain("#555555"); // gray (paper/ink) still present
+  it("reads the theme-color meta and expands shorthand hex", () => {
+    const html = '<meta name="theme-color" content="#abc"><style>:root{--main-bg:#1A1B2C}</style>';
+    const colors = extractBrandColors(html);
+    expect(colors).toContain("#AABBCC"); // #abc expanded
+    expect(colors).toContain("#1A1B2C");
+  });
+
+  it("drops noise colors even when declared", () => {
+    expect(extractBrandColors(":root{--x-color:#FFFFFF}")).not.toContain("#FFFFFF");
   });
 });
 

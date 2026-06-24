@@ -89,34 +89,49 @@ export function extractBrandFonts(text: string): string[] {
   return Array.from(found.entries()).sort((a, b) => b[1] - a[1]).map(([n]) => n).slice(0, 4);
 }
 
-/** HSV saturation of a #RRGGBB hex (0 = gray, 1 = vivid). */
-function hexSaturation(hex: string): number {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-  return mx === 0 ? 0 : (mx - mn) / mx;
+/** Normalize a CSS color token (#abc, #aabbcc, rgb(...)) to #RRGGBB, or null. */
+function normalizeHex(token: string): string | null {
+  const t = token.trim();
+  let m = t.match(/^#([0-9a-fA-F]{3})$/);
+  if (m) {
+    const [r, g, b] = m[1].split("");
+    return `#${r}${r}${g}${g}${b}${b}`.toUpperCase();
+  }
+  m = t.match(/^#([0-9a-fA-F]{6})$/);
+  if (m) return `#${m[1]}`.toUpperCase();
+  m = t.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (m) {
+    const h = (n: string) => Math.min(255, parseInt(n, 10)).toString(16).padStart(2, "0");
+    return `#${h(m[1])}${h(m[2])}${h(m[3])}`.toUpperCase();
+  }
+  return null;
 }
 
 /**
- * Extract brand color candidates (hex), filtering builder/system noise.
- * Returns the most frequent colors (paper/ink) AND the most saturated ones
- * (accent), so a low-frequency brand pink survives the gray shop chrome. Pure.
+ * Extract the colors a brand *explicitly declared* — CSS custom properties
+ * (:root { --brand: #... }) and the theme-color meta — NOT every hex on the
+ * page. Scraping all hex pulls in platform chrome (sale-badge red, button
+ * hovers, plugin defaults) that drowns the real brand color; declared tokens
+ * are the brand's own choices. The brand's working palette comes from images
+ * (logo/OG/feed); this only adds colors the brand named for itself. Pure.
  */
 export function extractBrandColors(text: string): string[] {
-  const freq = new Map<string, number>();
-  for (const m of text.matchAll(/#[0-9a-fA-F]{6}\b/g)) {
-    const hex = m[0].toUpperCase();
-    if (!NOISE_COLORS.has(hex)) freq.set(hex, (freq.get(hex) ?? 0) + 1);
+  const out = new Set<string>();
+  // CSS custom properties whose name hints at a brand/theme color.
+  for (const m of text.matchAll(
+    /--[\w-]*(?:color|brand|primary|accent|point|main|theme|bg|background|sub)[\w-]*:\s*(#[0-9a-fA-F]{3,6}|rgba?\([^)]+\))/gi
+  )) {
+    const hex = normalizeHex(m[1]);
+    if (hex && !NOISE_COLORS.has(hex)) out.add(hex);
   }
-  const entries = Array.from(freq.entries());
-  const byFreq = [...entries].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([h]) => h);
-  const bySat = entries
-    .filter(([h]) => hexSaturation(h) > 0.25)
-    .sort((a, b) => hexSaturation(b[0]) * b[1] - hexSaturation(a[0]) * a[1])
-    .slice(0, 4)
-    .map(([h]) => h);
-  return Array.from(new Set([...byFreq, ...bySat])).slice(0, 10);
+  // theme-color meta (the brand's declared chrome color).
+  for (const m of text.matchAll(
+    /theme-color["'][^>]*content=["'](#[0-9a-fA-F]{3,6}|rgba?\([^)]+\))/gi
+  )) {
+    const hex = normalizeHex(m[1]);
+    if (hex && !NOISE_COLORS.has(hex)) out.add(hex);
+  }
+  return Array.from(out).slice(0, 8);
 }
 
 async function fetchText(url: string, timeoutMs = 12000): Promise<string | null> {
