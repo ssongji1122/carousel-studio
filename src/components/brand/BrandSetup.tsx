@@ -177,7 +177,7 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
                   인스타·웹사이트에서 자동 설정
                 </label>
                 <p className="text-xs text-muted-foreground">
-                  공개 인스타 핸들과/또는 웹사이트 주소를 넣으면 바이오·피드 색·실제 폰트·OG 이미지·카피를 읽어 색·폰트·보이스를 채웁니다. 둘 다 넣으면 함께 분석합니다.
+                  공개 인스타 핸들과/또는 웹사이트 주소를 넣으면 바이오·피드 색·실제 폰트·OG 이미지·카피를 읽어 색·폰트·보이스를 채웁니다. 웹사이트를 비워두면 인스타 바이오 링크(litt.ly 등)에서 공식 사이트를 자동으로 찾아 함께 분석합니다.
                 </p>
                 <Input
                   value={igHandle}

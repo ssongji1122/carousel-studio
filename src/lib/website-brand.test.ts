@@ -4,6 +4,10 @@ import {
   extractBrandFonts,
   extractBrandColors,
   selectStylesheets,
+  unwrapInstagramUrl,
+  isAggregator,
+  parseLittlyLinks,
+  pickBestWebsite,
 } from "@/lib/website-brand";
 
 describe("parseHtmlMeta", () => {
@@ -42,6 +46,61 @@ describe("extractBrandColors", () => {
     expect(colors).toContain("#2D3536"); // real brand color survives
     expect(colors).not.toContain("#FF6900"); // gutenberg default removed
     expect(colors).not.toContain("#FFFFFF"); // noise removed
+  });
+});
+
+describe("unwrapInstagramUrl", () => {
+  it("decodes the u= target of an l.instagram redirect", () => {
+    const wrapped = "https://l.instagram.com/?u=https%3A%2F%2Ffrice.kr%2F&e=abc";
+    expect(unwrapInstagramUrl(wrapped)).toBe("https://frice.kr/");
+  });
+  it("passes through a plain url", () => {
+    expect(unwrapInstagramUrl("https://roseshaker.com")).toBe("https://roseshaker.com");
+  });
+});
+
+describe("isAggregator", () => {
+  it("flags litt.ly and linktr.ee", () => {
+    expect(isAggregator("https://litt.ly/foggone")).toBe(true);
+    expect(isAggregator("https://linktr.ee/x")).toBe(true);
+    expect(isAggregator("https://frice.kr")).toBe(false);
+  });
+});
+
+describe("parseLittlyLinks", () => {
+  it("extracts outbound links from base64 #data", () => {
+    const data = { blocks: [
+      { title: "Homepage", url: "https://roseshaker.com" },
+      { title: "Contact", link: "https://pf.kakao.com/_x" },
+    ] };
+    const b64 = Buffer.from(JSON.stringify(data), "utf-8").toString("base64");
+    const html = `<x><script id="data" type="text/plain">${b64}</script></x>`;
+    const links = parseLittlyLinks(html);
+    expect(links).toContain("https://roseshaker.com");
+    expect(links).toContain("https://pf.kakao.com/_x");
+  });
+  it("returns [] when there is no data script", () => {
+    expect(parseLittlyLinks("<html></html>")).toEqual([]);
+  });
+});
+
+describe("pickBestWebsite", () => {
+  it("prefers the brand's own domain over marketplaces and socials", () => {
+    const best = pickBestWebsite([
+      "https://smartstore.naver.com/frice",
+      "https://www.museumshop.or.kr/x",
+      "https://l.instagram.com/?u=http%3A%2F%2Ffrice.kr%2F&e=1",
+      "https://instagram.com/frice.kr",
+    ]);
+    expect(best).toBe("http://frice.kr/");
+  });
+  it("drops kakao/social and keeps the homepage", () => {
+    expect(pickBestWebsite(["https://roseshaker.com", "https://pf.kakao.com/_x"]))
+      .toBe("https://roseshaker.com");
+  });
+  it("returns null when nothing qualifies", () => {
+    expect(pickBestWebsite(["https://instagram.com/x", "https://litt.ly/y"]))
+      .toBeNull();
   });
 });
 

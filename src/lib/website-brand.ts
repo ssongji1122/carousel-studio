@@ -7,7 +7,7 @@
 // and system font stacks as noise, so we filter both out before handing the
 // candidates to Claude.
 
-import { extractPalette } from "@/lib/instagram-brand";
+import { extractPalette, type IgProfile } from "@/lib/instagram-brand";
 
 const WEB_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
@@ -128,6 +128,101 @@ export function selectStylesheets(html: string, baseUrl: string, max = 3): strin
   // theme/font stylesheets first — they carry brand type and color
   const score = (u: string) => (/theme|font/i.test(u) ? 0 : 1);
   return hrefs.sort((a, b) => score(a) - score(b)).slice(0, max);
+}
+
+// Link aggregators (link-in-bio services) that hide the real homepage behind
+// a JS page. We unwrap the most common Korean/global ones.
+const AGGREGATORS = /litt\.ly|linktr\.ee|lit\.link|taplink|link\.bio|bio\.link|linkby|campsite\.bio/i;
+
+// URLs that are never a brand's own website (social, chat, marketplaces).
+const JUNK_HOSTS =
+  /instagram\.com|facebook\.com|fb\.com|youtube|youtu\.be|tiktok|threads\.net|pf\.kakao|kakao\.com|open\.kakao|t\.me|twitter\.com|x\.com|naver\.me|blog\.naver|cafe\.naver/i;
+const MARKETPLACES =
+  /smartstore\.naver|shopping\.naver|m\.shopping|brand\.naver|coupang|11st|gmarket|auction\.|museumshop|ohou\.se|idus\.com|wadiz|aliexpress|taobao/i;
+
+/** Unwrap an l.instagram.com / l.facebook.com redirect to its real target. */
+export function unwrapInstagramUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (/l\.instagram\.com|l\.facebook\.com|lm\.facebook\.com/.test(u.hostname)) {
+      const target = u.searchParams.get("u");
+      if (target) return decodeURIComponent(target);
+    }
+  } catch {
+    /* not a URL */
+  }
+  return url;
+}
+
+export function isAggregator(url: string): boolean {
+  return AGGREGATORS.test(url);
+}
+
+/** Extract outbound links from a litt.ly page (base64 JSON in #data). Pure. */
+export function parseLittlyLinks(html: string): string[] {
+  const m = html.match(/<script id="data" type="text\/plain">([\s\S]*?)<\/script>/);
+  if (!m) return [];
+  let obj: unknown;
+  try {
+    const b64 = m[1].trim().replace(/&amp;/g, "&");
+    obj = JSON.parse(Buffer.from(b64, "base64").toString("utf-8"));
+  } catch {
+    return [];
+  }
+  const out: string[] = [];
+  const walk = (o: unknown) => {
+    if (Array.isArray(o)) o.forEach(walk);
+    else if (o && typeof o === "object") {
+      const r = o as Record<string, unknown>;
+      const u = r.url ?? r.link ?? r.linkUrl;
+      if (typeof u === "string" && /^https?:/.test(u)) out.push(u);
+      Object.values(r).forEach(walk);
+    }
+  };
+  walk(obj);
+  return out;
+}
+
+/** Pick the most likely official homepage from a set of candidate URLs. Pure. */
+export function pickBestWebsite(urls: string[]): string | null {
+  const seen = new Set<string>();
+  const scored: { url: string; score: number }[] = [];
+  for (const raw of urls) {
+    const url = unwrapInstagramUrl(raw);
+    if (JUNK_HOSTS.test(url) || isAggregator(url)) continue;
+    let host: string;
+    try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { continue; }
+    if (seen.has(host)) continue;
+    seen.add(host);
+    let score = 0;
+    if (MARKETPLACES.test(url)) score -= 5; // a shop link, not the brand site
+    if (url.startsWith("https")) score += 1;
+    score -= host.split(".").length * 0.2; // prefer a root domain over deep subdomains
+    scored.push({ url, score });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0]?.url ?? null;
+}
+
+/**
+ * Discover a brand's official website from its Instagram profile links —
+ * unwrapping IG redirects and expanding link-in-bio aggregators (litt.ly) to
+ * find the real homepage among shop/social links. Returns null if none found.
+ */
+export async function resolveBrandWebsite(profile: IgProfile): Promise<string | null> {
+  const raw = [profile.externalUrl, ...profile.bioLinks.map((b) => b.url)]
+    .filter((u): u is string => !!u)
+    .map(unwrapInstagramUrl);
+  const candidates: string[] = [];
+  for (const u of raw) {
+    if (isAggregator(u)) {
+      const html = await fetchText(u, 10000);
+      if (html) candidates.push(...parseLittlyLinks(html));
+    } else {
+      candidates.push(u);
+    }
+  }
+  return pickBestWebsite(candidates.length ? candidates : raw);
 }
 
 /** Fetch a website and extract brand signals. Throws only on a hard fetch fail. */
