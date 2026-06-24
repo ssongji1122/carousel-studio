@@ -1,7 +1,7 @@
 import type { Slide, AspectRatio } from "@/types/carousel";
 import type { BrandConfig } from "@/types/brand";
 
-type StructuredSlide = Pick<Slide, "role" | "headline" | "body" | "items" | "media">;
+type StructuredSlide = Pick<Slide, "role" | "headline" | "body" | "items" | "media" | "tone">;
 
 // Compact (SNS) sizing tokens for the 1080px export canvas. This tool only
 // outputs Instagram/Threads, so it always uses the brand's Compact variant
@@ -43,14 +43,22 @@ export function renderSlideHtml(
     : slide.role === "cta" ? "closing"
     : hasItems ? "list" : "statement";
 
-  const isDark = layout === "statement";
-  const bg = layout === "cover" ? c.background
-    : layout === "list" ? c.surface
-    : layout === "statement" ? darkBg
+  // Tone = color scheme, independent of layout. Default derives from layout
+  // (backward compatible); slide.tone overrides so a deck can mix rich brand
+  // sections (e.g. a wine-toned quote). Brand-lock numerals/fonts stay fixed.
+  const defaultTone: NonNullable<StructuredSlide["tone"]> =
+    layout === "list" ? "soft" : layout === "statement" ? "dark" : "paper";
+  const tone = slide.tone || defaultTone;
+  const wineBg = c.soot || darkBg;
+  const isDark = tone === "dark" || tone === "wine";
+  const bg = tone === "soft" ? c.surface
+    : tone === "dark" ? darkBg
+    : tone === "wine" ? wineBg
     : c.background;
   const ink = isDark ? c.background : c.primary;
   const subInk = isDark ? paperMute : c.secondary;
   const accentInk = isDark ? accentDark : c.accent;
+  const lineColor = isDark ? "rgba(245,244,240,0.22)" : c.line;
 
   const mediaHtml = slide.media
     ? `<img src="${slide.media.src}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:${slide.media.fit};opacity:0.9;" />`
@@ -59,7 +67,7 @@ export function renderSlideHtml(
   const eyebrowRow = (label: string) =>
     `<div style="display:flex;align-items:center;gap:18px;">
       <span style="font-family:'${mono}',monospace;font-weight:500;font-size:${SIZE.eyebrow}px;letter-spacing:0.16em;text-transform:uppercase;color:${accentInk};">${label}</span>
-      <span style="flex:1;height:1px;background:${isDark ? "rgba(245,244,240,0.25)" : c.line};"></span>
+      <span style="flex:1;height:1px;background:${lineColor};"></span>
     </div>`;
 
   const footer = `<div style="position:absolute;left:8%;bottom:6%;font-family:'${mono}',monospace;font-size:${SIZE.footer}px;letter-spacing:0.12em;text-transform:uppercase;color:${subInk};">${escapeHtml(brandName)}</div>`;
@@ -100,14 +108,14 @@ export function renderSlideHtml(
     inner = `${eyebrowRow(brandName)}${headline(SIZE.coverHead)}${bodyHtml(subInk)}`;
   } else if (layout === "list") {
     const lis = slide.items.map((it, i) =>
-      `<div style="display:flex;gap:26px;align-items:baseline;border-top:1px solid ${c.line};padding-top:16px;">
+      `<div style="display:flex;gap:26px;align-items:baseline;border-top:1px solid ${lineColor};padding-top:16px;">
         <span style="font-family:${numFont};font-weight:500;font-size:${SIZE.itemNum}px;line-height:0.9;color:${eucalyptus};flex:none;min-width:64px;">${String(i + 1).padStart(2, "0")}</span>
         <span data-edit="item" data-edit-index="${i}" style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.item}px;line-height:1.4;word-break:keep-all;color:${ink};">${escapeHtml(it)}</span>
       </div>`).join("");
     inner = `${eyebrowRow("list")}${headline(SIZE.head)}<div style="display:flex;flex-direction:column;gap:18px;margin-top:10px;">${lis}</div>`;
   } else if (layout === "statement") {
-    const quote = `<div style="font-family:${numFont};font-size:120px;line-height:0.5;color:${accentDark};height:64px;">&ldquo;</div>`;
-    inner = `${quote}${headline(SIZE.head)}${bodyHtml(paperMute)}`;
+    const quote = `<div style="font-family:${numFont};font-size:120px;line-height:0.5;color:${accentInk};height:64px;">&ldquo;</div>`;
+    inner = `${quote}${headline(SIZE.head)}${bodyHtml(subInk)}`;
   } else {
     const ctaPill = `<div style="margin-top:14px;display:inline-flex;align-items:center;gap:14px;align-self:flex-start;background:${c.accent};color:${c.background};font-family:${bodyFont};font-weight:600;font-size:${SIZE.cta}px;padding:16px 30px;border-radius:999px;">자세히 보기 <span style="font-family:'${mono}',monospace;">-&gt;</span></div>`;
     inner = `${eyebrowRow("next")}${headline(SIZE.head)}${bodyHtml(subInk)}${ctaPill}`;

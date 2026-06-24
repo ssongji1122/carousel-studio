@@ -1,5 +1,8 @@
 export type AspectRatio = "1:1" | "4:5" | "9:16";
 export type SlideRole = "hook" | "body" | "cta";
+// Color scheme of a slide, independent of its layout. Lets a deck mix rich
+// brand sections (e.g. a wine-toned quote). Omitted = derived from role.
+export type SlideTone = "paper" | "soft" | "dark" | "wine";
 export type Channel = "instagram" | "threads";
 
 export interface MediaRef {
@@ -22,6 +25,7 @@ export interface Slide {
   body: string;
   items: string[];
   media: MediaRef | null;
+  tone?: SlideTone;
 }
 
 export interface ReferenceImage {
