@@ -47,6 +47,8 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
   const [paletteTarget, setPaletteTarget] =
     useState<"accent" | "background" | "primary" | "surface">("accent");
   const [customHex, setCustomHex] = useState("");
+  const [expandSeed, setExpandSeed] = useState("");
+  const [expanding, setExpanding] = useState(false);
   const normalizedHex = customHex.trim().replace(/^#?/, "#");
   const customHexValid = /^#[0-9a-fA-F]{6}$/.test(normalizedHex);
 
@@ -106,6 +108,26 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
       setImportingIg(false);
     }
   }, [igHandle, webUrl]);
+
+  const handleExpand = useCallback(async () => {
+    const seed = expandSeed.trim() || brand.colors.accent;
+    setExpanding(true);
+    try {
+      const res = await fetch("/api/brand/expand", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seed }),
+      });
+      if (res.ok) {
+        const { colors } = (await res.json()) as { colors: BrandConfig["colors"] };
+        setBrand((b) => ({ ...b, colors: { ...b.colors, ...colors } }));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setExpanding(false);
+    }
+  }, [expandSeed, brand.colors.accent]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -329,6 +351,29 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
                   </div>
                 </div>
               )}
+              <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+                <label className="text-xs font-medium">한 색에서 전체 팔레트 (OKLCH · 접근성)</label>
+                <p className="text-[10px] text-muted-foreground">
+                  시드 1색을 넣으면 배경·잉크·보조색을 WCAG 대비까지 맞춰 자동 생성합니다. 비우면 현재 Accent 사용.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={expandSeed}
+                    onChange={(e) => setExpandSeed(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleExpand(); }}
+                    placeholder={brand.colors.accent}
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    onClick={handleExpand}
+                    variant="accent"
+                    disabled={expanding}
+                    className="whitespace-nowrap"
+                  >
+                    {expanding ? "확장 중..." : "팔레트 확장"}
+                  </Button>
+                </div>
+              </div>
               <ColorPicker
                 label="Primary"
                 value={brand.colors.primary}
