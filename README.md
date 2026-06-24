@@ -78,8 +78,8 @@ It's open source under MIT. Fork it, tweak the system prompt, ship your own vari
 1. **Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code)** and authenticate.
 2. **Clone and open the repo** in Claude Code:
    ```bash
-   git clone https://github.com/Hainrixz/open-carrusel.git
-   cd open-carrusel
+   git clone https://github.com/ssongji1122/carousel-studio.git
+   cd carousel-studio
    claude
    ```
 3. In the Claude Code prompt, type:
@@ -92,8 +92,8 @@ That's it. Dependencies install, the dev server starts, your browser opens. Now 
 ### Manual path (if you don't use Claude Code)
 
 ```bash
-git clone https://github.com/Hainrixz/open-carrusel.git
-cd open-carrusel
+git clone https://github.com/ssongji1122/carousel-studio.git
+cd carousel-studio
 npm run setup        # installs deps + seeds /data/
 npm run dev          # starts http://localhost:3000
 ```
