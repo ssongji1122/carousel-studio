@@ -4,6 +4,7 @@ import { useEffect, useRef, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SlideRenderer } from "./SlideRenderer";
+import { EditableSlideView } from "./EditableSlideView";
 import { SafeZoneOverlay } from "./SafeZoneOverlay";
 import type { Slide, AspectRatio } from "@/types/carousel";
 
@@ -13,6 +14,9 @@ interface CarouselPreviewProps {
   activeIndex: number;
   onActiveChange: (index: number) => void;
   showSafeZones?: boolean;
+  editMode?: boolean;
+  carouselId?: string;
+  onSlideSaved?: (slide: Slide) => void;
 }
 
 export function CarouselPreview({
@@ -21,6 +25,9 @@ export function CarouselPreview({
   activeIndex,
   onActiveChange,
   showSafeZones = false,
+  editMode = false,
+  carouselId,
+  onSlideSaved,
 }: CarouselPreviewProps) {
   const slide = slides[activeIndex];
   const prevIndexRef = useRef(activeIndex);
@@ -67,12 +74,22 @@ export function CarouselPreview({
           className="oc-slide-in relative w-full h-full"
           style={{ "--oc-slide-from": `${direction}px` } as CSSProperties}
         >
-          <SlideRenderer
-            html={slide.html}
-            aspectRatio={aspectRatio}
-            style={{ width: "100%", height: "100%" }}
-          />
-          <SafeZoneOverlay aspectRatio={aspectRatio} visible={showSafeZones} />
+          {editMode && carouselId ? (
+            <EditableSlideView
+              carouselId={carouselId}
+              slide={slide}
+              aspectRatio={aspectRatio}
+              onSaved={(s) => onSlideSaved?.(s)}
+              style={{ width: "100%", height: "100%" }}
+            />
+          ) : (
+            <SlideRenderer
+              html={slide.html}
+              aspectRatio={aspectRatio}
+              style={{ width: "100%", height: "100%" }}
+            />
+          )}
+          <SafeZoneOverlay aspectRatio={aspectRatio} visible={showSafeZones && !editMode} />
         </div>
 
         {/* Right arrow */}

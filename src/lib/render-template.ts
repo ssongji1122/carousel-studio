@@ -65,11 +65,11 @@ export function renderSlideHtml(
   const footer = `<div style="position:absolute;left:8%;bottom:6%;font-family:'${mono}',monospace;font-size:${SIZE.footer}px;letter-spacing:0.12em;text-transform:uppercase;color:${subInk};">${escapeHtml(brandName)}</div>`;
 
   const headline = (size: number) =>
-    `<div style="font-family:${headFont};font-weight:700;font-size:${size}px;line-height:1.12;letter-spacing:-0.01em;word-break:keep-all;color:${ink};">${escapeHtml(slide.headline)}</div>`;
+    `<div data-edit="headline" style="font-family:${headFont};font-weight:700;font-size:${size}px;line-height:1.12;letter-spacing:-0.01em;word-break:keep-all;color:${ink};">${escapeHtml(slide.headline)}</div>`;
 
   const bodyHtml = (color: string) =>
     slide.body
-      ? `<div style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.body}px;line-height:1.62;word-break:keep-all;color:${color};">${escapeHtml(slide.body)}</div>`
+      ? `<div data-edit="body" style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.body}px;line-height:1.62;word-break:keep-all;color:${color};">${escapeHtml(slide.body)}</div>`
       : "";
 
   // Media region: when a slide carries an image, render it inside a framed
@@ -80,14 +80,14 @@ export function renderSlideHtml(
     const fit = slide.media.fit || "cover";
     const big = slide.role === "hook";
     const capHead = slide.headline
-      ? `<div style="font-family:${headFont};font-weight:700;font-size:${big ? SIZE.head : 44}px;line-height:1.14;letter-spacing:-0.01em;word-break:keep-all;color:${c.primary};">${escapeHtml(slide.headline)}</div>`
+      ? `<div data-edit="headline" style="font-family:${headFont};font-weight:700;font-size:${big ? SIZE.head : 44}px;line-height:1.14;letter-spacing:-0.01em;word-break:keep-all;color:${c.primary};">${escapeHtml(slide.headline)}</div>`
       : "";
     const capBody = slide.body
-      ? `<div style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.body - 4}px;line-height:1.55;word-break:keep-all;color:${c.secondary};">${escapeHtml(slide.body)}</div>`
+      ? `<div data-edit="body" style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.body - 4}px;line-height:1.55;word-break:keep-all;color:${c.secondary};">${escapeHtml(slide.body)}</div>`
       : "";
     return `<div style="position:relative;width:100%;height:100%;background:${c.background};color:${c.primary};padding:8% 8% 11%;display:flex;flex-direction:column;gap:24px;overflow:hidden;">
     ${eyebrowRow(brandName)}
-    <div style="flex:1;min-height:0;border:1px solid ${c.line};border-radius:6px;overflow:hidden;background:${c.surface};">
+    <div data-edit="media" style="flex:1;min-height:0;border:1px solid ${c.line};border-radius:6px;overflow:hidden;background:${c.surface};">
       <img src="${src}" alt="" style="width:100%;height:100%;object-fit:${fit};display:block;" />
     </div>
     ${capHead}${capBody}
@@ -102,7 +102,7 @@ export function renderSlideHtml(
     const lis = slide.items.map((it, i) =>
       `<div style="display:flex;gap:26px;align-items:baseline;border-top:1px solid ${c.line};padding-top:16px;">
         <span style="font-family:${numFont};font-weight:500;font-size:${SIZE.itemNum}px;line-height:0.9;color:${eucalyptus};flex:none;min-width:64px;">${String(i + 1).padStart(2, "0")}</span>
-        <span style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.item}px;line-height:1.4;word-break:keep-all;color:${ink};">${escapeHtml(it)}</span>
+        <span data-edit="item" data-edit-index="${i}" style="font-family:${bodyFont};font-weight:500;font-size:${SIZE.item}px;line-height:1.4;word-break:keep-all;color:${ink};">${escapeHtml(it)}</span>
       </div>`).join("");
     inner = `${eyebrowRow("list")}${headline(SIZE.head)}<div style="display:flex;flex-direction:column;gap:18px;margin-top:10px;">${lis}</div>`;
   } else if (layout === "statement") {

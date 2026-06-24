@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2, Grid3X3, Bookmark, Maximize2 } from "lucide-react";
+import { Trash2, Grid3X3, Bookmark, Maximize2, Pencil } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -16,7 +16,7 @@ import { ExportButton } from "@/components/editor/ExportButton";
 import { CaptionPanel } from "@/components/editor/CaptionPanel";
 import { SafeZoneOverlay } from "@/components/editor/SafeZoneOverlay";
 import { FullscreenPreview } from "@/components/editor/FullscreenPreview";
-import type { Carousel, AspectRatio, Channel } from "@/types/carousel";
+import type { Carousel, AspectRatio, Channel, Slide } from "@/types/carousel";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -33,6 +33,15 @@ export default function CarouselEditorPage({ params }: PageProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSafeZones, setShowSafeZones] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+
+  const handleSlideSaved = useCallback((updated: Slide) => {
+    setCarousel((prev) =>
+      prev
+        ? { ...prev, slides: prev.slides.map((s) => (s.id === updated.id ? updated : s)) }
+        : prev
+    );
+  }, []);
 
   // Confirm dialog state
   const [confirmState, setConfirmState] = useState<{
@@ -279,6 +288,17 @@ export default function CarouselEditorPage({ params }: PageProps) {
             />
             <div className="flex-1" />
             <Button
+              variant={editMode ? "accent" : "ghost"}
+              size="sm"
+              onClick={() => setEditMode((v) => !v)}
+              className={editMode ? "" : "text-muted-foreground"}
+              aria-label="Toggle inline edit"
+              title="텍스트·이미지 인라인 편집"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              {editMode ? "완료" : "편집"}
+            </Button>
+            <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowFullscreen(true)}
@@ -342,6 +362,9 @@ export default function CarouselEditorPage({ params }: PageProps) {
             activeIndex={activeSlide}
             onActiveChange={setActiveSlide}
             showSafeZones={showSafeZones}
+            editMode={editMode}
+            carouselId={id}
+            onSlideSaved={handleSlideSaved}
           />
 
           {/* Caption panel */}
