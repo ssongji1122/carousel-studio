@@ -1,10 +1,10 @@
-import type { AspectRatio, MediaRef, SlideRole } from "@/types/carousel";
+import type { AspectRatio, MediaRef, SlideRole, SlideTone } from "@/types/carousel";
 import type { BrandConfig } from "@/types/brand";
 import { renderSlideHtml } from "@/lib/render-template";
 import { checkVoice, type VoiceViolation } from "@/lib/voice-filter";
 
 export function buildSlideFromStructured(
-  input: { role: SlideRole; headline: string; body: string; items?: string[]; media?: MediaRef | null },
+  input: { role: SlideRole; headline: string; body: string; items?: string[]; media?: MediaRef | null; tone?: SlideTone },
   brand: BrandConfig,
   aspect: AspectRatio
 ): { html: string; violations: VoiceViolation[] } {
