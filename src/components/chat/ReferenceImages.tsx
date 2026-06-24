@@ -116,7 +116,7 @@ export function ReferenceImages({
             Drop reference images here
           </p>
           <p className="text-[9px] text-muted-foreground/70">
-            The AI will study these to match your style
+            색·레이아웃을 분석해 이 캐러셀에 반영합니다
           </p>
         </div>
       ) : (
@@ -134,6 +134,17 @@ export function ReferenceImages({
                   className="w-full h-full object-cover"
                 />
               </button>
+              {img.palette?.length ? (
+                <div className="flex gap-0.5 mt-1 justify-center" title={`이 캐러셀 색으로 참고: ${img.palette.join(", ")}`}>
+                  {img.palette.slice(0, 5).map((c) => (
+                    <span
+                      key={c}
+                      className="h-2 w-2 rounded-full border border-border/40"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+              ) : null}
               {/* Remove button */}
               <button
                 onClick={() => handleRemove(img.id)}

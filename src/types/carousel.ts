@@ -34,6 +34,7 @@ export interface ReferenceImage {
   absPath: string;    // absolute path for Claude to Read
   name: string;       // original filename or description
   addedAt: string;
+  palette?: string[]; // dominant + accent colors extracted from the image
 }
 
 export interface Carousel {

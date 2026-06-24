@@ -9,6 +9,7 @@
 // the manual "문서에서 가져오기" path. Only public profiles are reachable.
 
 import sharp from "sharp";
+import { promises as fs } from "fs";
 
 const IG_APP_ID = "936619743392459";
 const IG_UA =
@@ -242,4 +243,25 @@ export function profileImageUrls(profile: IgProfile): string[] {
   return [
     ...profile.posts.map((p) => p.imageUrl).filter((u): u is string => !!u),
   ];
+}
+
+/** Extract a dominant + accent palette from a local image file (a reference
+ * the user uploaded). Same quantization as brand extraction. Returns [] on
+ * failure so a bad upload never breaks the request. */
+export async function extractPaletteFromFile(
+  absPath: string,
+  maxColors = 5
+): Promise<string[]> {
+  try {
+    const buf = await fs.readFile(absPath);
+    const { data, info } = await sharp(buf)
+      .resize(120, 120, { fit: "inside" })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const map = new Map<number, Bucket>();
+    accumulateBuckets(data, info.channels, map);
+    return topColors(map, maxColors);
+  } catch {
+    return [];
+  }
 }

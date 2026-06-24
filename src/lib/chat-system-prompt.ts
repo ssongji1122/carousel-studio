@@ -27,7 +27,11 @@ Use professional defaults: dark text on white/light backgrounds, Inter font, cle
 - Channel: ${carousel.channel}
 - Slides: ${carousel.slides.length}/${MAX_SLIDES}
 ${carousel.slides.length > 0 ? carousel.slides.map((s) => `  - Slide ${s.order + 1} (ID: ${s.id})${s.notes ? ` — ${s.notes}` : ""}`).join("\n") : "  (no slides yet)"}
-${(carousel.referenceImages?.length ?? 0) > 0 ? `\n## Reference images (use Read to view these)\n${carousel.referenceImages.map((r) => `- "${r.name}" → ${r.absPath}`).join("\n")}` : ""}`
+${(carousel.referenceImages?.length ?? 0) > 0 ? `\n## Reference images — this carousel's design reference
+Read each image (use Read on its path) and follow it for THIS carousel only:
+- Colors: use the reference palette below as this carousel's accent/colors. Keep the brand's fonts and voice; let the reference drive color (especially accent). Brand default colors stay unchanged — this override is per-carousel.
+- Layout & mood: study each reference's composition, spacing, alignment, and overall mood, and echo it within the available slide roles (hook/body/list/cta).
+${carousel.referenceImages.map((r) => `- "${r.name}" → ${r.absPath}${r.palette?.length ? ` — palette: ${r.palette.join(", ")}` : ""}`).join("\n")}` : ""}`
     : "";
 
   const presetSection = stylePreset
