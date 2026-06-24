@@ -33,6 +33,10 @@ export async function POST(request: NextRequest) {
   // Source path: fetch Instagram and/or website signals, synthesize a single
   // brand document, then fall through to the same Claude extraction as docs.
   let docs = typeof fields.docs === "string" ? fields.docs : "";
+  // All distinct colors we observed, returned to the UI so the user can pick
+  // which one is the accent/main — Claude maps by dominance, but a brand's
+  // accent is often a low-frequency color a human spots instantly.
+  let extractedPalette: string[] = [];
   if (instagram || website) {
     try {
       const sources: BrandSources = {};
@@ -55,6 +59,13 @@ export async function POST(request: NextRequest) {
           if (website) throw new Error("웹사이트를 불러오지 못했습니다. 주소를 확인해 주세요.");
         }
       }
+      extractedPalette = Array.from(
+        new Set([
+          ...(sources.ig?.palette ?? []),
+          ...(sources.web?.ogPalette ?? []),
+          ...(sources.web?.cssColors ?? []),
+        ])
+      );
       docs = buildBrandDoc(sources);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "소스에서 가져오지 못했습니다.";
@@ -103,5 +114,5 @@ export async function POST(request: NextRequest) {
   }
 
   const updated = await getBrand();
-  return NextResponse.json(updated);
+  return NextResponse.json({ ...updated, extractedPalette });
 }
