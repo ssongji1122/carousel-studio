@@ -40,6 +40,8 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
   const [docsText, setDocsText] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [igHandle, setIgHandle] = useState("");
+  const [importingIg, setImportingIg] = useState(false);
 
   useEffect(() => {
     if (initialBrand) setBrand(initialBrand);
@@ -67,6 +69,31 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
       setImporting(false);
     }
   }, [docsText]);
+
+  const handleImportInstagram = useCallback(async () => {
+    if (!igHandle.trim()) return;
+    setImportingIg(true);
+    setImportError(null);
+    try {
+      const res = await fetch("/api/brand/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instagram: igHandle }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setImportError(
+          data?.error ?? "인스타그램에서 브랜드를 가져오지 못했습니다. 공개 계정인지 확인해 주세요."
+        );
+        return;
+      }
+      setBrand((await res.json()) as BrandConfig);
+    } catch {
+      setImportError("네트워크 오류로 가져오지 못했습니다.");
+    } finally {
+      setImportingIg(false);
+    }
+  }, [igHandle]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -141,6 +168,33 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
         <div className="px-6 py-4 min-h-[240px]">
           {step === 0 && (
             <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
+                <label className="text-sm font-medium">
+                  인스타그램에서 자동 설정
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  공개 계정 핸들을 넣으면 바이오·시리즈·피드 색을 읽어 색·폰트·보이스를 채웁니다. 비공식 공개 API라 일시적으로 막힐 수 있습니다.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={igHandle}
+                    onChange={(e) => setIgHandle(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleImportInstagram(); }}
+                    placeholder="@roseshaker"
+                  />
+                  <Button
+                    onClick={handleImportInstagram}
+                    variant="accent"
+                    disabled={importingIg || !igHandle.trim()}
+                    className="whitespace-nowrap"
+                  >
+                    {importingIg ? "가져오는 중..." : "인스타에서 가져오기"}
+                  </Button>
+                </div>
+                {importError && importingIg === false && igHandle.trim() !== "" && (
+                  <p className="text-xs text-destructive">{importError}</p>
+                )}
+              </div>
               <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
                 <label className="text-sm font-medium">
                   브랜드 문서로 자동 설정
