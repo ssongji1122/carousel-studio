@@ -92,3 +92,40 @@ export function expandPalette(seedHex: string): BrandColors {
   };
   return colors;
 }
+
+// Hybrid guard: keep the caller's brand-aware colors (e.g. picked by the
+// import subprocess for mood), fill any missing tokens from the accent seed,
+// and deterministically guarantee WCAG contrast on text/accent. LLMs pick
+// colors well but compute contrast unreliably — this is the math safety net.
+export function guardPalette(input: Partial<BrandColors>): {
+  colors: BrandColors;
+  adjusted: string[];
+} {
+  const seed = input.accent || input.primary || "#697C70";
+  const base = expandPalette(seed);
+  const merged: BrandColors = {
+    background: input.background || base.background,
+    surface: input.surface || base.surface,
+    line: input.line || base.line,
+    primary: input.primary || base.primary,
+    secondary: input.secondary || base.secondary,
+    accent: input.accent || base.accent,
+    dark: input.dark || base.dark,
+    accentDark: input.accentDark || base.accentDark,
+    eucalyptus: input.eucalyptus || base.eucalyptus,
+    dusty: input.dusty || base.dusty,
+    soot: input.soot || base.soot,
+  };
+  const bg = merged.background;
+  const adjusted: string[] = [];
+  const guard = (key: "primary" | "secondary" | "accent", target: number) => {
+    if (contrastRatio(merged[key], bg) < target) {
+      merged[key] = ensureContrast(hexToOklch(merged[key]), bg, target);
+      adjusted.push(key);
+    }
+  };
+  guard("primary", 4.5);
+  guard("secondary", 3);
+  guard("accent", 3);
+  return { colors: merged, adjusted };
+}
