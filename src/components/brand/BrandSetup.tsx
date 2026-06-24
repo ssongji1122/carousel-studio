@@ -49,6 +49,9 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
   const [customHex, setCustomHex] = useState("");
   const [expandSeed, setExpandSeed] = useState("");
   const [expanding, setExpanding] = useState(false);
+  const [brief, setBrief] = useState({ name: "", business: "", target: "", mood: "", avoid: "" });
+  const [generating, setGenerating] = useState(false);
+  const [generatedDocs, setGeneratedDocs] = useState<{ brandMd: string; designMd: string } | null>(null);
   const normalizedHex = customHex.trim().replace(/^#?/, "#");
   const customHexValid = /^#[0-9a-fA-F]{6}$/.test(normalizedHex);
 
@@ -108,6 +111,37 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
       setImportingIg(false);
     }
   }, [igHandle, webUrl]);
+
+  const handleGenerate = useCallback(async () => {
+    if (!brief.name.trim() || !brief.business.trim() || !brief.mood.trim()) return;
+    setGenerating(true);
+    setImportError(null);
+    setGeneratedDocs(null);
+    try {
+      const res = await fetch("/api/brand/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(brief),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setImportError(data?.error ?? "브랜드를 생성하지 못했습니다. 다시 시도해 주세요.");
+        return;
+      }
+      const gen = (await res.json()) as BrandConfig & {
+        extractedPalette?: string[];
+        brandMd?: string;
+        designMd?: string;
+      };
+      setBrand(gen);
+      if (gen.extractedPalette?.length) setExtractedPalette(gen.extractedPalette);
+      setGeneratedDocs({ brandMd: gen.brandMd ?? "", designMd: gen.designMd ?? "" });
+    } catch {
+      setImportError("네트워크 오류로 생성하지 못했습니다.");
+    } finally {
+      setGenerating(false);
+    }
+  }, [brief]);
 
   const handleExpand = useCallback(async () => {
     const seed = expandSeed.trim() || brand.colors.accent;
@@ -202,6 +236,31 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
         <div className="px-6 py-4 min-h-[240px]">
           {step === 0 && (
             <div className="space-y-4">
+              <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
+                <label className="text-sm font-medium">질문으로 만들기 (브랜드가 아직 없다면)</label>
+                <p className="text-xs text-muted-foreground">
+                  몇 가지만 답하면 분위기에 맞는 색·폰트·보이스를 추론해 brand.md·design.md까지 만들어 적용합니다.
+                </p>
+                <Input value={brief.name} onChange={(e) => setBrief({ ...brief, name: e.target.value })} placeholder="브랜드명" />
+                <Input value={brief.business} onChange={(e) => setBrief({ ...brief, business: e.target.value })} placeholder="무엇을 하나요 (예: 여아 키즈웨어)" />
+                <Input value={brief.target} onChange={(e) => setBrief({ ...brief, target: e.target.value })} placeholder="타깃 고객 (예: 3~7세 자녀를 둔 엄마)" />
+                <Input value={brief.mood} onChange={(e) => setBrief({ ...brief, mood: e.target.value })} placeholder="분위기 (예: 걸리·하이엔드 / 미니멀 / 럭셔리)" />
+                <Input value={brief.avoid} onChange={(e) => setBrief({ ...brief, avoid: e.target.value })} placeholder="피하고 싶은 느낌 (선택)" />
+                <Button
+                  onClick={handleGenerate}
+                  variant="accent"
+                  disabled={generating || !brief.name.trim() || !brief.business.trim() || !brief.mood.trim()}
+                >
+                  {generating ? "만드는 중..." : "질문으로 만들기"}
+                </Button>
+                {generatedDocs && (
+                  <div className="space-y-1 pt-1">
+                    <p className="text-[10px] text-muted-foreground">brand.md · design.md 생성됨 (복사해 보관하세요)</p>
+                    <textarea readOnly value={generatedDocs.brandMd} rows={4} className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-[10px] font-mono resize-none" />
+                    <textarea readOnly value={generatedDocs.designMd} rows={4} className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-[10px] font-mono resize-none" />
+                  </div>
+                )}
+              </div>
               <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-2">
                 <label className="text-sm font-medium">
                   인스타·웹사이트에서 자동 설정
