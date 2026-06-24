@@ -42,6 +42,13 @@ function ensureFonts(html: string) {
   }
 }
 
+const TONES = [
+  { v: "paper", label: "종이" },
+  { v: "soft", label: "소프트" },
+  { v: "dark", label: "다크" },
+  { v: "wine", label: "와인" },
+] as const;
+
 export function EditableSlideView({
   carouselId,
   slide,
@@ -252,21 +259,36 @@ export function EditableSlideView({
         </div>
       )}
 
-      {/* Bottom action bar: structural edits */}
-      {(isList || canAddBody) && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-          {isList && (
-            <button type="button" onClick={() => saveField({ items: [...items, "새 항목"] })} className={barBtn}>
-              <Plus className="h-3.5 w-3.5" /> 항목 추가
+      {/* Bottom action bar: tone picker + structural edits */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
+        <div className="flex items-center gap-1 bg-white border border-border rounded-full px-2 py-1 shadow-sm">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">tone</span>
+          {TONES.map((t) => (
+            <button
+              key={t.v}
+              type="button"
+              onClick={() => saveField({ tone: t.v })}
+              className={`text-[11px] px-2 py-0.5 rounded-full transition-colors ${
+                slide.tone === t.v
+                  ? "bg-accent text-white"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {t.label}
             </button>
-          )}
-          {canAddBody && (
-            <button type="button" onClick={() => saveField({ body: "본문을 입력하세요" })} className={barBtn}>
-              <Type className="h-3.5 w-3.5" /> 본문 추가
-            </button>
-          )}
+          ))}
         </div>
-      )}
+        {isList && (
+          <button type="button" onClick={() => saveField({ items: [...items, "새 항목"] })} className={barBtn}>
+            <Plus className="h-3.5 w-3.5" /> 항목
+          </button>
+        )}
+        {canAddBody && (
+          <button type="button" onClick={() => saveField({ body: "본문을 입력하세요" })} className={barBtn}>
+            <Type className="h-3.5 w-3.5" /> 본문
+          </button>
+        )}
+      </div>
 
       {saving && (
         <div className="absolute top-2 right-2 text-[11px] text-muted-foreground bg-white/80 rounded px-2 py-0.5">
