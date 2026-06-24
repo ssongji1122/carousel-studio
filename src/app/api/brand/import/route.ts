@@ -4,7 +4,9 @@ import crossSpawn from "cross-spawn";
 import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
 import { getBrand } from "@/lib/brand";
 import { buildBrandImportPrompt } from "@/lib/brand-import-prompt";
-import { buildBrandDocFromInstagram } from "@/lib/instagram-brand";
+import { fetchInstagramProfile, extractPalette, profileImageUrls } from "@/lib/instagram-brand";
+import { fetchWebsiteSignals } from "@/lib/website-brand";
+import { buildBrandDoc, type BrandSources } from "@/lib/brand-doc";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,21 +28,31 @@ export async function POST(request: NextRequest) {
   }
   const fields = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
   const instagram = typeof fields.instagram === "string" ? fields.instagram.trim() : "";
+  const website = typeof fields.website === "string" ? fields.website.trim() : "";
 
-  // Instagram path: fetch the public profile + palette and synthesize a brand
-  // document, then fall through to the same Claude extraction as the docs path.
+  // Source path: fetch Instagram and/or website signals, synthesize a single
+  // brand document, then fall through to the same Claude extraction as docs.
   let docs = typeof fields.docs === "string" ? fields.docs : "";
-  if (instagram) {
+  if (instagram || website) {
     try {
-      docs = await buildBrandDocFromInstagram(instagram);
+      const sources: BrandSources = {};
+      if (instagram) {
+        const profile = await fetchInstagramProfile(instagram);
+        const palette = await extractPalette(profileImageUrls(profile));
+        sources.ig = { profile, palette };
+      }
+      if (website) {
+        sources.web = await fetchWebsiteSignals(website);
+      }
+      docs = buildBrandDoc(sources);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "인스타그램에서 가져오지 못했습니다.";
+      const msg = e instanceof Error ? e.message : "소스에서 가져오지 못했습니다.";
       return NextResponse.json({ error: msg }, { status: 502 });
     }
   }
 
   if (!docs.trim()) {
-    return NextResponse.json({ error: "docs or instagram required" }, { status: 400 });
+    return NextResponse.json({ error: "docs, instagram, or website required" }, { status: 400 });
   }
   if (docs.length > 60000) {
     return NextResponse.json({ error: "docs too large" }, { status: 413 });

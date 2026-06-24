@@ -188,57 +188,10 @@ export async function extractPalette(imageUrls: string[], maxColors = 6): Promis
   return topColors(map, maxColors);
 }
 
-/**
- * Build the brand document the import prompt consumes. We hand Claude the raw
- * palette + bio + recent series captions and let it map colors→tokens, infer
- * fonts from mood, and assemble voice — the same judgment a human applies.
- * Pure.
- */
-export function buildInstagramBrandDoc(profile: IgProfile, palette: string[]): string {
-  const series = profile.posts
-    .map((p) => p.caption.replace(/\s+/g, " ").trim().slice(0, 80))
-    .filter(Boolean)
-    .slice(0, 8);
-  const mood = [profile.category, ...profile.bioLinks.map((b) => b.title)]
-    .filter(Boolean)
-    .join(" · ");
-
-  return `# ${profile.fullName || profile.username} — 브랜드 문서 (Instagram 추출)
-
-> 출처: Instagram @${profile.username} (web_profile_info) + 피드 이미지 도미넌트 컬러.
-
-## 정체성
-- 이름: ${profile.fullName || profile.username}
-- 카테고리: ${profile.category ?? "미상"} (팔로워 ${profile.followers})
-- 바이오: ${profile.biography.replace(/\n/g, " / ") || "없음"}
-- 외부 링크: ${profile.externalUrl ?? "없음"}
-- 무드 단서: ${mood || "없음"}
-
-## 색 (피드 도미넌트 컬러 — 가장 빈도 높은 순)
-${palette.length ? palette.map((h) => `- ${h}`).join("\n") : "- (추출 실패)"}
-
-이 팔레트의 HEX만 사용하세요. 목록에 없는 색을 새로 발명하거나 다른 브랜드 값을 가져오지 마세요.
-- background = 가장 밝은 값, primary = 가장 어두운 값, accent = 가장 채도 있는(무채색이 아닌) 값.
-- **colors 객체의 11개 키(primary·secondary·accent·background·surface·line·dark·accentDark·eucalyptus·dusty·soot)를 빠짐없이 모두 채우세요.** 마땅한 값이 없는 보조 키는 위 팔레트 안에서 가장 가까운 값을 복제해 넣으세요. 키를 비우면 이전 브랜드의 색이 남으니 절대 생략하지 마세요.
-
-## 폰트
-공식 지정 서체 단서는 없습니다. 위 카테고리·무드에서 유추하세요. 한국어 본문이 많으면 body는 Pretendard, 세리프 무드면 heading에 세리프(한글은 Nanum Myeongjo 폴백)를 권장.
-
-## 시리즈·콘텐츠 단서 (보이스·키워드 추정용)
-${series.length ? series.map((s) => `- ${s}`).join("\n") : "- 없음"}
-
-## 보이스
-- 어미: 합니다체 (정중)
-- 피할 단어: 혁신적, 혁신, 융합, 솔루션, 시너지, 패러다임, 선도, 최고의, 차세대, 임팩트, 스케일, 피벗`;
-}
-
-/** End-to-end: handle → profile + palette → brand document string. */
-export async function buildBrandDocFromInstagram(handle: string): Promise<string> {
-  const profile = await fetchInstagramProfile(handle);
-  const images = [
+/** All representative image URLs for palette extraction (posts + profile pic). */
+export function profileImageUrls(profile: IgProfile): string[] {
+  return [
     ...profile.posts.map((p) => p.imageUrl).filter((u): u is string => !!u),
     ...(profile.profilePicUrl ? [profile.profilePicUrl] : []),
   ];
-  const palette = await extractPalette(images);
-  return buildInstagramBrandDoc(profile, palette);
 }
