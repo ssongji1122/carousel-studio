@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ImageUp } from "lucide-react";
+import { ImageUp, Maximize, Plus, Type } from "lucide-react";
 import { extractFontFamilies } from "@/lib/slide-html";
 import { DIMENSIONS } from "@/types/carousel";
 import type { Slide, AspectRatio } from "@/types/carousel";
@@ -19,30 +19,26 @@ interface EditableSlideViewProps {
 function ensureFonts(html: string) {
   if (typeof document === "undefined") return;
   const families = extractFontFamilies(html);
-  const google = families.filter((f) => !/pretendard/i.test(f));
+  const links: string[] = [];
   if (/pretendard/i.test(html)) {
-    const href =
-      "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css";
-    if (!document.querySelector(`link[data-oc-font="${href}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = href;
-      link.dataset.ocFont = href;
-      document.head.appendChild(link);
-    }
+    links.push(
+      "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css"
+    );
   }
+  const google = families.filter((f) => !/pretendard/i.test(f));
   if (google.length > 0) {
     const params = google
       .map((f) => `family=${encodeURIComponent(f)}:wght@400;500;600;700;800`)
       .join("&");
-    const href = `https://fonts.googleapis.com/css2?${params}&display=swap`;
-    if (!document.querySelector(`link[data-oc-font="${href}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = href;
-      link.dataset.ocFont = href;
-      document.head.appendChild(link);
-    }
+    links.push(`https://fonts.googleapis.com/css2?${params}&display=swap`);
+  }
+  for (const href of links) {
+    if (document.querySelector(`link[data-oc-font="${href}"]`)) continue;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    link.dataset.ocFont = href;
+    document.head.appendChild(link);
   }
 }
 
@@ -57,27 +53,27 @@ export function EditableSlideView({
   const stageRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
-  const [mediaBtn, setMediaBtn] = useState<{ left: number; top: number } | null>(null);
+  const [mediaCenter, setMediaCenter] = useState<{ left: number; top: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const { width: slideW, height: slideH } = DIMENSIONS[aspectRatio];
+
+  const items = slide.items ?? [];
+  const isList = items.length > 0;
+  const hasMedia = !!slide.media;
+  // Lists don't render a body; offer "add body" only where it would show.
+  const canAddBody = !isList && !slide.body;
 
   // PUT a structured patch; the API re-renders the slide HTML and returns it.
   const saveField = useCallback(
     async (patch: Record<string, unknown>) => {
       setSaving(true);
       try {
-        const res = await fetch(
-          `/api/carousels/${carouselId}/slides/${slide.id}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(patch),
-          }
-        );
-        if (res.ok) {
-          const updated = await res.json();
-          onSaved(updated);
-        }
+        const res = await fetch(`/api/carousels/${carouselId}/slides/${slide.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        if (res.ok) onSaved(await res.json());
       } finally {
         setSaving(false);
       }
@@ -85,56 +81,75 @@ export function EditableSlideView({
     [carouselId, slide.id, onSaved]
   );
 
-  // Inject the slide HTML imperatively, keyed by slide id, so live prop updates
-  // (from re-render after save) don't wipe the in-place cursor/selection.
+  // Inject slide HTML imperatively (keyed by html), wire inline editing, and
+  // inject a per-item delete button into each list row.
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
     ensureFonts(slide.html);
     stage.innerHTML = slide.html;
-
-    const editables = stage.querySelectorAll<HTMLElement>(
-      '[data-edit="headline"],[data-edit="body"],[data-edit="item"]'
-    );
     const cleanups: Array<() => void> = [];
-    editables.forEach((el) => {
-      el.setAttribute("contenteditable", "true");
-      el.style.outline = "none";
-      el.style.cursor = "text";
-      const original = el.textContent ?? "";
-      const onBlur = () => {
-        const next = (el.textContent ?? "").trim();
-        if (next === original.trim()) return;
-        const kind = el.dataset.edit;
-        if (kind === "headline") saveField({ headline: next });
-        else if (kind === "body") saveField({ body: next });
-        else if (kind === "item") {
-          const idx = Number(el.dataset.editIndex ?? "-1");
-          const items = [...(slide.items ?? [])];
-          if (idx >= 0 && idx < items.length) {
-            items[idx] = next;
-            saveField({ items });
+
+    // contentEditable text fields
+    stage
+      .querySelectorAll<HTMLElement>('[data-edit="headline"],[data-edit="body"],[data-edit="item"]')
+      .forEach((el) => {
+        el.setAttribute("contenteditable", "true");
+        el.style.outline = "none";
+        el.style.cursor = "text";
+        const original = el.textContent ?? "";
+        const onBlur = () => {
+          const next = (el.textContent ?? "").trim();
+          if (next === original.trim()) return;
+          const kind = el.dataset.edit;
+          if (kind === "headline") saveField({ headline: next });
+          else if (kind === "body") saveField({ body: next });
+          else if (kind === "item") {
+            const idx = Number(el.dataset.editIndex ?? "-1");
+            const next_items = [...items];
+            if (idx >= 0 && idx < next_items.length) {
+              next_items[idx] = next;
+              saveField({ items: next_items });
+            }
           }
-        }
+        };
+        el.addEventListener("blur", onBlur);
+        cleanups.push(() => el.removeEventListener("blur", onBlur));
+      });
+
+    // per-item delete (×) injected into each row
+    stage.querySelectorAll<HTMLElement>('[data-edit="item"]').forEach((el) => {
+      const row = el.parentElement;
+      if (!row) return;
+      row.style.position = "relative";
+      const del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "×";
+      del.setAttribute("contenteditable", "false");
+      del.style.cssText =
+        "position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:none;border-radius:999px;background:rgba(26,26,24,0.7);color:#fff;font-size:30px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;";
+      const idx = Number(el.dataset.editIndex ?? "-1");
+      const onClick = (ev: MouseEvent) => {
+        ev.preventDefault();
+        const next_items = items.filter((_, i) => i !== idx);
+        saveField({ items: next_items });
       };
-      el.addEventListener("blur", onBlur);
-      cleanups.push(() => el.removeEventListener("blur", onBlur));
+      del.addEventListener("click", onClick);
+      cleanups.push(() => del.removeEventListener("click", onClick));
+      row.appendChild(del);
     });
 
-    // Locate the media region (if any) to place a replace button over it.
+    // locate media region center for the overlay controls
     const mediaEl = stage.querySelector<HTMLElement>('[data-edit="media"]');
-    if (mediaEl) {
-      setMediaBtn({
-        left: mediaEl.offsetLeft + mediaEl.offsetWidth / 2,
-        top: mediaEl.offsetTop + mediaEl.offsetHeight / 2,
-      });
-    } else {
-      setMediaBtn(null);
-    }
+    setMediaCenter(
+      mediaEl
+        ? { left: mediaEl.offsetLeft + mediaEl.offsetWidth / 2, top: mediaEl.offsetTop + mediaEl.offsetHeight / 2 }
+        : null
+    );
 
     return () => cleanups.forEach((fn) => fn());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slide.id, slide.html, saveField]);
+  }, [slide.html, saveField]);
 
   // Scale-to-fit measurement (mirrors SlideRenderer).
   useEffect(() => {
@@ -164,25 +179,23 @@ export function EditableSlideView({
     if (!res.ok) return;
     const { url } = await res.json();
     await saveField({
-      media: {
-        type: "image",
-        src: url,
-        fit: slide.media?.fit ?? "cover",
-        source: "uploaded",
-      },
+      media: { type: "image", src: url, fit: slide.media?.fit ?? "cover", source: "uploaded" },
     });
   };
+
+  const toggleFit = () =>
+    slide.media &&
+    saveField({
+      media: { ...slide.media, fit: slide.media.fit === "cover" ? "contain" : "cover" },
+    });
+
+  const barBtn =
+    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-border text-xs font-medium text-foreground hover:border-accent shadow-sm";
 
   return (
     <div
       ref={outerRef}
-      style={{
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        ...style,
-      }}
+      style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", ...style }}
     >
       <input
         ref={fileRef}
@@ -214,35 +227,47 @@ export function EditableSlideView({
               left: 0,
             }}
           />
-          {/* Image replace button centered over the media region */}
-          {mediaBtn && (
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
+          {/* Image region controls */}
+          {mediaCenter && (
+            <div
               style={{
                 position: "absolute",
-                left: mediaBtn.left * scale,
-                top: mediaBtn.top * scale,
+                left: mediaCenter.left * scale,
+                top: mediaCenter.top * scale,
                 transform: "translate(-50%, -50%)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 14px",
-                borderRadius: 999,
-                border: "none",
-                background: "rgba(26,26,24,0.78)",
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
               }}
             >
-              <ImageUp className="h-3.5 w-3.5" />
-              이미지 교체
+              <button type="button" onClick={() => fileRef.current?.click()} className={barBtn}>
+                <ImageUp className="h-3.5 w-3.5" /> 이미지 교체
+              </button>
+              <button type="button" onClick={toggleFit} className={barBtn}>
+                <Maximize className="h-3.5 w-3.5" />
+                {slide.media?.fit === "contain" ? "맞추기" : "채우기"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bottom action bar: structural edits */}
+      {(isList || canAddBody) && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {isList && (
+            <button type="button" onClick={() => saveField({ items: [...items, "새 항목"] })} className={barBtn}>
+              <Plus className="h-3.5 w-3.5" /> 항목 추가
+            </button>
+          )}
+          {canAddBody && (
+            <button type="button" onClick={() => saveField({ body: "본문을 입력하세요" })} className={barBtn}>
+              <Type className="h-3.5 w-3.5" /> 본문 추가
             </button>
           )}
         </div>
       )}
+
       {saving && (
         <div className="absolute top-2 right-2 text-[11px] text-muted-foreground bg-white/80 rounded px-2 py-0.5">
           저장 중…
