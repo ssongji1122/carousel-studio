@@ -5,7 +5,7 @@ import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
 import { getBrand } from "@/lib/brand";
 import { buildBrandImportPrompt } from "@/lib/brand-import-prompt";
 import { fetchInstagramProfile, extractPalette, profileImageUrls } from "@/lib/instagram-brand";
-import { fetchWebsiteSignals } from "@/lib/website-brand";
+import { fetchWebsiteSignals, resolveBrandWebsite } from "@/lib/website-brand";
 import { buildBrandDoc, type BrandSources } from "@/lib/brand-doc";
 
 export const runtime = "nodejs";
@@ -36,13 +36,24 @@ export async function POST(request: NextRequest) {
   if (instagram || website) {
     try {
       const sources: BrandSources = {};
+      let siteUrl = website;
       if (instagram) {
         const profile = await fetchInstagramProfile(instagram);
         const palette = await extractPalette(profileImageUrls(profile));
         sources.ig = { profile, palette };
+        // No website given? Discover the official site from the profile's
+        // bio links (unwrapping IG redirects and litt.ly aggregators).
+        if (!siteUrl) {
+          siteUrl = (await resolveBrandWebsite(profile)) ?? "";
+        }
       }
-      if (website) {
-        sources.web = await fetchWebsiteSignals(website);
+      if (siteUrl) {
+        // A discovered site may be unreachable; don't fail the whole import.
+        try {
+          sources.web = await fetchWebsiteSignals(siteUrl);
+        } catch {
+          if (website) throw new Error("웹사이트를 불러오지 못했습니다. 주소를 확인해 주세요.");
+        }
       }
       docs = buildBrandDoc(sources);
     } catch (e) {
