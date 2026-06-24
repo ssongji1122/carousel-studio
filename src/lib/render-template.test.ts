@@ -12,9 +12,10 @@ describe("renderSlideHtml", () => {
     );
     expect(html).toContain("형태가 되는 생각");
     expect(html).toContain("#F5F4F0");
-    // Compact (SNS) variant: headline uses JetBrains Mono (Korean falls back
-    // to Pretendard), not the Default Cormorant.
-    expect(html).toContain("JetBrains Mono");
+    // Headline leads with the brand heading font (Cormorant), with Nanum Myeongjo
+    // as the Korean serif fallback so the brand face reaches Korean headlines.
+    expect(html).toMatch(/data-edit="headline"[^>]*Cormorant Garamond/);
+    expect(html).toMatch(/data-edit="headline"[^>]*Nanum Myeongjo/);
     expect(html).toMatch(/font-weight:700/);
   });
   it("includes an img tag when media present", () => {

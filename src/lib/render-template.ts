@@ -4,10 +4,12 @@ import type { BrandConfig } from "@/types/brand";
 type StructuredSlide = Pick<Slide, "role" | "headline" | "body" | "items" | "media">;
 
 // Compact (SNS) sizing tokens for the 1080px export canvas. This tool only
-// outputs Instagram/Threads, so it always uses the brand's Compact variant
-// (typography.md): bold Pretendard 700 headlines (Korean primary), Pretendard
-// 500 body, and Cormorant Garamond for display numerals (DNA lock). Layout
-// varies by slide type and tonal background shifts give the deck rhythm.
+// outputs Instagram/Threads. Headlines lead with the brand's heading font so
+// each imported brand keeps its own face (a serif brand reads as serif, a mono
+// brand as mono); Nanum Myeongjo is the Korean serif fallback when the heading
+// font carries no Hangul glyphs (e.g. Cormorant, Playfair), and the body font
+// is the final fallback. Body stays at weight 500, and the heading font also
+// drives display numerals (DNA lock). Tonal background shifts give rhythm.
 const SIZE = {
   eyebrow: 22,
   coverHead: 104,
@@ -27,8 +29,9 @@ export function renderSlideHtml(
   const c = brand.colors;
   const mono = brand.fonts.mono || "JetBrains Mono";
   const serif = brand.fonts.heading || "Cormorant Garamond"; // DNA lock: numerals
-  // Korean-primary headline: Pretendard 700 leads, Mono fallback for Latin.
-  const headFont = `'${brand.fonts.body}', '${mono}', sans-serif`;
+  // Headline leads with the brand heading font; Nanum Myeongjo is the Korean
+  // serif fallback for Latin-only heading faces; body font is the last resort.
+  const headFont = `'${serif}', 'Nanum Myeongjo', '${brand.fonts.body}', sans-serif`;
   const bodyFont = `'${brand.fonts.body}', -apple-system, sans-serif`;
   const numFont = `'${serif}', 'Nanum Myeongjo', serif`;
 
