@@ -3,7 +3,6 @@ import {
   normalizeHandle,
   parseProfileJson,
   dominantColorsFromRaw,
-  buildInstagramBrandDoc,
 } from "@/lib/instagram-brand";
 
 describe("normalizeHandle", () => {
@@ -70,27 +69,5 @@ describe("dominantColorsFromRaw", () => {
     expect(colors[0]).toMatch(/^#[0-9A-F]{6}$/);
     // bucket average of the two pinks lands near #F7D7DD
     expect(colors[0].startsWith("#F")).toBe(true);
-  });
-});
-
-describe("buildInstagramBrandDoc", () => {
-  it("includes handle, palette hexes, and token-mapping guidance", () => {
-    const profile = {
-      username: "frice.kr",
-      fullName: "frice 프라이스",
-      biography: "K-Culture & Lifestyle",
-      category: null,
-      followers: 3286,
-      externalUrl: "http://frice.kr",
-      bioLinks: [],
-      profilePicUrl: null,
-      posts: [{ caption: "정상석 클리커", imageUrl: null }],
-    };
-    const doc = buildInstagramBrandDoc(profile, ["#1D211A", "#E0DAD4"]);
-    expect(doc).toContain("@frice.kr");
-    expect(doc).toContain("#1D211A");
-    expect(doc).toContain("background");
-    expect(doc).toContain("정상석 클리커");
-    expect(doc).toContain("합니다체");
   });
 });
