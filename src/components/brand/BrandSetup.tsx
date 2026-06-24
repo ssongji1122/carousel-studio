@@ -46,6 +46,9 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
   const [extractedPalette, setExtractedPalette] = useState<string[]>([]);
   const [paletteTarget, setPaletteTarget] =
     useState<"accent" | "background" | "primary" | "surface">("accent");
+  const [customHex, setCustomHex] = useState("");
+  const normalizedHex = customHex.trim().replace(/^#?/, "#");
+  const customHexValid = /^#[0-9a-fA-F]{6}$/.test(normalizedHex);
 
   useEffect(() => {
     if (initialBrand) setBrand(initialBrand);
@@ -296,6 +299,33 @@ export function BrandSetup({ open, onComplete, initialBrand }: BrandSetupProps) 
                         style={{ backgroundColor: hex }}
                       />
                     ))}
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">직접 입력</span>
+                    <div
+                      className="h-6 w-6 rounded-md border border-border shrink-0"
+                      style={{ backgroundColor: customHexValid ? normalizedHex : "transparent" }}
+                    />
+                    <Input
+                      value={customHex}
+                      onChange={(e) => setCustomHex(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && customHexValid)
+                          setBrand({ ...brand, colors: { ...brand.colors, [paletteTarget]: normalizedHex } });
+                      }}
+                      placeholder="#FFB8D5"
+                      className="h-7 text-xs font-mono"
+                    />
+                    <Button
+                      onClick={() =>
+                        setBrand({ ...brand, colors: { ...brand.colors, [paletteTarget]: normalizedHex } })
+                      }
+                      disabled={!customHexValid}
+                      variant="accent"
+                      className="h-7 whitespace-nowrap"
+                    >
+                      {paletteTarget}에 적용
+                    </Button>
                   </div>
                 </div>
               )}
