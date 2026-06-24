@@ -58,6 +58,14 @@ describe("extractBrandColors", () => {
   it("drops noise colors even when declared", () => {
     expect(extractBrandColors(":root{--x-color:#FFFFFF}")).not.toContain("#FFFFFF");
   });
+
+  it("keeps repeated vivid brand colors (red/pink), drops one-off hex", () => {
+    const css = ".btn{color:#FF1F1F}.link{border:#FF1F1F}.tag{background:#FF8CB4}.t2{color:#FF8CB4}.x{color:#123456}";
+    const colors = extractBrandColors(css);
+    expect(colors).toContain("#FF1F1F"); // brand red, used twice
+    expect(colors).toContain("#FF8CB4"); // brand pink, used twice
+    expect(colors).not.toContain("#123456"); // low-saturation one-off, ignored
+  });
 });
 
 describe("unwrapInstagramUrl", () => {

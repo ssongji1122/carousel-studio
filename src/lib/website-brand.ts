@@ -107,31 +107,53 @@ function normalizeHex(token: string): string | null {
   return null;
 }
 
+/** HSV saturation of a #RRGGBB hex (0 = gray, 1 = vivid). */
+function hexSaturation(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  return mx === 0 ? 0 : (mx - mn) / mx;
+}
+
 /**
- * Extract the colors a brand *explicitly declared* — CSS custom properties
- * (:root { --brand: #... }) and the theme-color meta — NOT every hex on the
- * page. Scraping all hex pulls in platform chrome (sale-badge red, button
- * hovers, plugin defaults) that drowns the real brand color; declared tokens
- * are the brand's own choices. The brand's working palette comes from images
- * (logo/OG/feed); this only adds colors the brand named for itself. Pure.
+ * Extract a brand's accent colors from its site. Two sources:
+ * 1. Declared tokens — CSS custom properties (:root { --brand: # }) and the
+ *    theme-color meta. These are unambiguous brand choices.
+ * 2. Repeated vivid colors — saturated hex that appears 2+ times. A brand's
+ *    real accent (momspepper's red/pink) recurs across buttons/badges/links,
+ *    while platform chrome and one-off hex don't. We DON'T scrape every hex
+ *    (that buried the brand color in shop noise); we keep the vivid, recurring
+ *    ones and drop known builder/admin defaults via NOISE_COLORS. Pure.
  */
 export function extractBrandColors(text: string): string[] {
-  const out = new Set<string>();
-  // CSS custom properties whose name hints at a brand/theme color.
+  const declared = new Set<string>();
   for (const m of text.matchAll(
     /--[\w-]*(?:color|brand|primary|accent|point|main|theme|bg|background|sub)[\w-]*:\s*(#[0-9a-fA-F]{3,6}|rgba?\([^)]+\))/gi
   )) {
     const hex = normalizeHex(m[1]);
-    if (hex && !NOISE_COLORS.has(hex)) out.add(hex);
+    if (hex && !NOISE_COLORS.has(hex)) declared.add(hex);
   }
-  // theme-color meta (the brand's declared chrome color).
   for (const m of text.matchAll(
     /theme-color["'][^>]*content=["'](#[0-9a-fA-F]{3,6}|rgba?\([^)]+\))/gi
   )) {
     const hex = normalizeHex(m[1]);
-    if (hex && !NOISE_COLORS.has(hex)) out.add(hex);
+    if (hex && !NOISE_COLORS.has(hex)) declared.add(hex);
   }
-  return Array.from(out).slice(0, 8);
+
+  // Repeated vivid colors = the brand's working accents (red/pink/etc.).
+  const freq = new Map<string, number>();
+  for (const m of text.matchAll(/#[0-9a-fA-F]{6}\b/g)) {
+    const hex = m[0].toUpperCase();
+    if (!NOISE_COLORS.has(hex)) freq.set(hex, (freq.get(hex) ?? 0) + 1);
+  }
+  const vivid = Array.from(freq.entries())
+    .filter(([h, n]) => n >= 2 && hexSaturation(h) > 0.3)
+    .sort((a, b) => hexSaturation(b[0]) * Math.log(b[1] + 1) - hexSaturation(a[0]) * Math.log(a[1] + 1))
+    .slice(0, 8)
+    .map(([h]) => h);
+
+  return Array.from(new Set([...declared, ...vivid])).slice(0, 12);
 }
 
 async function fetchText(url: string, timeoutMs = 12000): Promise<string | null> {
