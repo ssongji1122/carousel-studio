@@ -89,14 +89,34 @@ export function extractBrandFonts(text: string): string[] {
   return Array.from(found.entries()).sort((a, b) => b[1] - a[1]).map(([n]) => n).slice(0, 4);
 }
 
-/** Extract brand color candidates (hex), filtering builder/system noise. Pure. */
+/** HSV saturation of a #RRGGBB hex (0 = gray, 1 = vivid). */
+function hexSaturation(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  return mx === 0 ? 0 : (mx - mn) / mx;
+}
+
+/**
+ * Extract brand color candidates (hex), filtering builder/system noise.
+ * Returns the most frequent colors (paper/ink) AND the most saturated ones
+ * (accent), so a low-frequency brand pink survives the gray shop chrome. Pure.
+ */
 export function extractBrandColors(text: string): string[] {
   const freq = new Map<string, number>();
   for (const m of text.matchAll(/#[0-9a-fA-F]{6}\b/g)) {
     const hex = m[0].toUpperCase();
     if (!NOISE_COLORS.has(hex)) freq.set(hex, (freq.get(hex) ?? 0) + 1);
   }
-  return Array.from(freq.entries()).sort((a, b) => b[1] - a[1]).map(([h]) => h).slice(0, 8);
+  const entries = Array.from(freq.entries());
+  const byFreq = [...entries].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([h]) => h);
+  const bySat = entries
+    .filter(([h]) => hexSaturation(h) > 0.25)
+    .sort((a, b) => hexSaturation(b[0]) * b[1] - hexSaturation(a[0]) * a[1])
+    .slice(0, 4)
+    .map(([h]) => h);
+  return Array.from(new Set([...byFreq, ...bySat])).slice(0, 10);
 }
 
 async function fetchText(url: string, timeoutMs = 12000): Promise<string | null> {
