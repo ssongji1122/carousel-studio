@@ -99,7 +99,7 @@ export async function addSlide(
   carouselId: string,
   html: string,
   notes = "",
-  structured?: Partial<Pick<Slide, "role" | "headline" | "body" | "items" | "media">>
+  structured?: Partial<Pick<Slide, "role" | "headline" | "body" | "items" | "media" | "tone">>
 ): Promise<Slide | null> {
   const data = await load();
   const carousel = data.carousels.find((c) => c.id === carouselId);
@@ -117,6 +117,7 @@ export async function addSlide(
     body: structured?.body ?? "",
     items: structured?.items ?? [],
     media: structured?.media ?? null,
+    tone: structured?.tone,
   };
   carousel.slides.push(slide);
   carousel.updatedAt = now();
@@ -127,7 +128,7 @@ export async function addSlide(
 export async function updateSlide(
   carouselId: string,
   slideId: string,
-  updates: Partial<Pick<Slide, "html" | "notes" | "role" | "headline" | "body" | "items" | "media">>
+  updates: Partial<Pick<Slide, "html" | "notes" | "role" | "headline" | "body" | "items" | "media" | "tone">>
 ): Promise<Slide | null> {
   const data = await load();
   const carousel = data.carousels.find((c) => c.id === carouselId);

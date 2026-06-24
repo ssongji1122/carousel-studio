@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { addSlide, reorderSlides, getCarousel } from "@/lib/carousels";
 import { getBrand } from "@/lib/brand";
 import { buildSlideFromStructured } from "@/lib/slide-build";
-import type { SlideRole, MediaRef } from "@/types/carousel";
+import type { SlideRole, MediaRef, SlideTone } from "@/types/carousel";
+
+const TONES: readonly SlideTone[] = ["paper", "soft", "dark", "wine"];
+const asTone = (v: unknown): SlideTone | undefined =>
+  TONES.includes(v as SlideTone) ? (v as SlideTone) : undefined;
 
 export async function POST(
   request: Request,
@@ -13,7 +17,7 @@ export async function POST(
     const body = await request.json();
 
     // Structured input takes precedence over raw html
-    if (body.role !== undefined || body.headline !== undefined || body.body !== undefined || body.items !== undefined) {
+    if (body.role !== undefined || body.headline !== undefined || body.body !== undefined || body.items !== undefined || body.tone !== undefined) {
       const carousel = await getCarousel(id);
       if (!carousel) {
         return NextResponse.json(
@@ -28,6 +32,7 @@ export async function POST(
         body: String(body.body ?? ""),
         items: Array.isArray(body.items) ? body.items.map((x: unknown) => String(x)) : [],
         media: (body.media ?? null) as MediaRef | null,
+        tone: asTone(body.tone),
       };
 
       const brand = await getBrand();
