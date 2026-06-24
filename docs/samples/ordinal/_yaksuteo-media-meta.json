@@ -1,0 +1,74 @@
+{
+  "carouselId": "0e728400-9499-4db0-948b-ece160e69c95",
+  "slides": [
+    {
+      "role": "hook",
+      "media": {
+        "type": "image",
+        "src": "/uploads/4265a497-57a2-48cc-a3a8-9f6dc38adabc.png",
+        "fit": "cover",
+        "source": "uploaded"
+      },
+      "headline": "그림 속에 숨긴 이야기",
+      "body": "약수터 카페를 위해 그린 키비주얼. 느린 시간을 에칭으로 옮겼어요."
+    },
+    {
+      "role": "body",
+      "headline": "이건 단순한 그림이 아니에요",
+      "body": "조금은 느리게 시간이 흐르는 공간. 그 공기를 한 장면에 담았습니다."
+    },
+    {
+      "role": "body",
+      "headline": "이 그림에 담긴 것",
+      "items": [
+        "오디널 특유의 에칭 질감",
+        "겹겹이 쌓은 섬세한 선과 고요함",
+        "풍경 곳곳에 흩어진 작은 동물들",
+        "동물마다 붙은 넘버링 주석",
+        "구석에 숨은 저마다의 이야기"
+      ]
+    },
+    {
+      "role": "body",
+      "headline": "숨은 카피바라를 찾으셨나요",
+      "body": "풍경 곳곳에 작은 동물들이 숨어 있어요. 천천히 볼수록 더 보입니다."
+    },
+    {
+      "role": "body",
+      "media": {
+        "type": "image",
+        "src": "/uploads/9271871b-8fc1-49ec-ac01-157805e2c019.png",
+        "fit": "cover",
+        "source": "uploaded"
+      },
+      "headline": "no.2 — 노트북 치는 카피바라",
+      "body": "넘버링된 주석과 함께, 풍경 한구석에 조용히 앉아 있어요."
+    },
+    {
+      "role": "body",
+      "media": {
+        "type": "image",
+        "src": "/uploads/e617d9db-1457-486b-8d8f-72bc4004fec7.png",
+        "fit": "cover",
+        "source": "uploaded"
+      },
+      "headline": "no.3 — 숲 사이의 한 마리",
+      "body": "각 동물은 저마다의 작은 이야기를 품고 있습니다."
+    },
+    {
+      "role": "body",
+      "headline": "키비주얼을 만드는 순서",
+      "items": [
+        "공간이 가진 속도를 먼저 관찰해요",
+        "장면의 구조를 천천히 스케치해요",
+        "에칭 질감으로 결 하나하나를 새겨요",
+        "숨은 이야기와 주석을 더해 완성해요"
+      ]
+    },
+    {
+      "role": "cta",
+      "headline": "당신의 공간에도",
+      "body": "브랜드와 공간을 위한 키비주얼을 만듭니다. ordinal.kr 에서 만나보세요."
+    }
+  ]
+}

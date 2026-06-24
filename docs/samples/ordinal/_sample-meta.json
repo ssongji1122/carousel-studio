@@ -1,0 +1,94 @@
+{
+  "carouselId": "83887e45-f2da-428b-8cd7-49df3ff871da",
+  "brand": {
+    "name": "ORDINAL® EDITION",
+    "colors": {
+      "primary": "#241A12",
+      "secondary": "#6E5E4B",
+      "accent": "#9E6B45",
+      "background": "#F3EEDE",
+      "surface": "#ECE3CC",
+      "line": "#E0D6C0",
+      "dark": "#26201A",
+      "accentDark": "#D9C77E",
+      "eucalyptus": "#BE9A45",
+      "dusty": "#7C817A",
+      "soot": "#474842"
+    },
+    "fonts": {
+      "heading": "EB Garamond",
+      "body": "Nanum Myeongjo",
+      "mono": "JetBrains Mono"
+    },
+    "styleKeywords": [
+      "warm paper",
+      "botanical",
+      "etching",
+      "editorial",
+      "museum",
+      "slow"
+    ],
+    "voice": {
+      "ending": "합니다체",
+      "banned": [
+        "혁신적",
+        "혁신",
+        "융합",
+        "솔루션",
+        "시너지",
+        "패러다임",
+        "선도",
+        "최고의",
+        "차세대",
+        "임팩트",
+        "스케일",
+        "피벗"
+      ],
+      "keywords": [
+        "관찰",
+        "기록",
+        "드로잉",
+        "식물",
+        "느리게",
+        "형태"
+      ]
+    }
+  },
+  "slides": [
+    {
+      "role": "hook",
+      "headline": "느리게 그리는 일",
+      "body": "관찰에서 기록으로. 식물 한 점을 오래 들여다보는 드로잉 리추얼입니다."
+    },
+    {
+      "role": "body",
+      "headline": "관찰의 다섯 단계",
+      "items": [
+        "전체의 윤곽을 먼저 봅니다",
+        "빛이 닿는 방향을 찾습니다",
+        "잎맥의 결을 따라갑니다",
+        "그림자의 농도를 나눕니다",
+        "마지막에 질감을 새깁니다"
+      ]
+    },
+    {
+      "role": "body",
+      "headline": "선 하나에 시간이 머뭅니다",
+      "body": "빠르게 지나친 것은 그릴 수 없습니다. 오래 본 것만이 형태가 됩니다."
+    },
+    {
+      "role": "body",
+      "headline": "오디널의 기록",
+      "items": [
+        "KEYHOLE — 작은 틈으로 본 풍경",
+        "BOTANICAL — 식물 세밀 드로잉",
+        "KEY VISUAL — 공간을 위한 그림"
+      ]
+    },
+    {
+      "role": "cta",
+      "headline": "오래 보는 연습",
+      "body": "ordinal.kr 에서 더 많은 기록을 만납니다."
+    }
+  ]
+}
