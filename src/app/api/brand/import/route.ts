@@ -4,6 +4,7 @@ import crossSpawn from "cross-spawn";
 import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
 import { getBrand } from "@/lib/brand";
 import { buildBrandImportPrompt } from "@/lib/brand-import-prompt";
+import { buildBrandDocFromInstagram } from "@/lib/instagram-brand";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,12 +24,23 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const docs =
-    typeof body === "object" && body !== null && typeof (body as Record<string, unknown>).docs === "string"
-      ? ((body as Record<string, unknown>).docs as string)
-      : "";
+  const fields = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
+  const instagram = typeof fields.instagram === "string" ? fields.instagram.trim() : "";
+
+  // Instagram path: fetch the public profile + palette and synthesize a brand
+  // document, then fall through to the same Claude extraction as the docs path.
+  let docs = typeof fields.docs === "string" ? fields.docs : "";
+  if (instagram) {
+    try {
+      docs = await buildBrandDocFromInstagram(instagram);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "인스타그램에서 가져오지 못했습니다.";
+      return NextResponse.json({ error: msg }, { status: 502 });
+    }
+  }
+
   if (!docs.trim()) {
-    return NextResponse.json({ error: "docs required" }, { status: 400 });
+    return NextResponse.json({ error: "docs or instagram required" }, { status: 400 });
   }
   if (docs.length > 60000) {
     return NextResponse.json({ error: "docs too large" }, { status: 413 });
