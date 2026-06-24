@@ -47,6 +47,14 @@ describe("extractBrandColors", () => {
     expect(colors).not.toContain("#FF6900"); // gutenberg default removed
     expect(colors).not.toContain("#FFFFFF"); // noise removed
   });
+
+  it("keeps a low-frequency saturated brand color over high-frequency gray", () => {
+    // gray repeated many times, pink only twice — pink must still survive
+    const css = "x{color:#555555}".repeat(20) + "y{color:#FF8CB4}z{color:#FF8CB4}";
+    const colors = extractBrandColors(css);
+    expect(colors).toContain("#FF8CB4"); // accent pink kept via saturation
+    expect(colors).toContain("#555555"); // gray (paper/ink) still present
+  });
 });
 
 describe("unwrapInstagramUrl", () => {
