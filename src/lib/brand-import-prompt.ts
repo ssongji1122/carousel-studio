@@ -3,7 +3,12 @@
 // profile, then PUT it to /api/brand. Markdown prose is unreliable to parse
 // by regex, so we let Claude do the extraction and write the result back via
 // the existing brand API (same curl pattern as the rest of the app).
-export function buildBrandImportPrompt(docs: string): string {
+const DEFAULT_API_BASE_URL = "http://localhost:3000";
+
+export function buildBrandImportPrompt(
+  docs: string,
+  apiBaseUrl = DEFAULT_API_BASE_URL
+): string {
   return `당신은 브랜드 문서에서 디자인 토큰을 추출하는 도우미입니다.
 
 아래는 사용자의 브랜드 문서(brand.md / design.md / tokens.css 등)입니다. 이 문서에서
@@ -21,7 +26,7 @@ export function buildBrandImportPrompt(docs: string): string {
 
 ## 적용 — 추출한 JSON으로 brand API에 PUT (Bash curl)
 \`\`\`bash
-curl -s -X PUT http://localhost:3000/api/brand \\
+curl -s -X PUT ${apiBaseUrl}/api/brand \\
   -H "Content-Type: application/json" \\
   -d '{
     "name": "...",

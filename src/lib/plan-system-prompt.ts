@@ -1,7 +1,13 @@
 import type { BrandConfig } from "@/types/brand";
 import type { Plan } from "@/types/plan";
 
-export function buildPlannerPrompt(brand: BrandConfig, plan: Plan): string {
+const DEFAULT_API_BASE_URL = "http://localhost:3000";
+
+export function buildPlannerPrompt(
+  brand: BrandConfig,
+  plan: Plan,
+  apiBaseUrl = DEFAULT_API_BASE_URL
+): string {
   const v = brand.voice;
   const banned = v.banned.join(", ");
   const voiceLine = plan.channel === "threads"
@@ -20,7 +26,7 @@ export function buildPlannerPrompt(brand: BrandConfig, plan: Plan): string {
 3. 각 주제를 아래 형식으로 하나씩 POST 한다(Bash curl 사용):
 
 \`\`\`bash
-curl -s -X POST http://localhost:3000/api/plans/${plan.id}/items \\
+curl -s -X POST ${apiBaseUrl}/api/plans/${plan.id}/items \\
   -H "Content-Type: application/json" \\
   -d '{"pillar":"필러명","topic":"주제 한 줄"}'
 \`\`\`

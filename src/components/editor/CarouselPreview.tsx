@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SlideRenderer } from "./SlideRenderer";
@@ -30,11 +30,12 @@ export function CarouselPreview({
   onSlideSaved,
 }: CarouselPreviewProps) {
   const slide = slides[activeIndex];
-  const prevIndexRef = useRef(activeIndex);
-  const direction = activeIndex >= prevIndexRef.current ? 12 : -12;
-  useEffect(() => {
-    prevIndexRef.current = activeIndex;
-  }, [activeIndex]);
+  const [direction, setDirection] = useState(12);
+
+  const handleActiveChange = (index: number) => {
+    setDirection(index >= activeIndex ? 12 : -12);
+    onActiveChange(index);
+  };
 
   if (!slide) {
     return (
@@ -60,7 +61,7 @@ export function CarouselPreview({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onActiveChange(activeIndex - 1)}
+          onClick={() => handleActiveChange(activeIndex - 1)}
           disabled={activeIndex <= 0}
           className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 shadow-sm hover:bg-white h-9 w-9"
           aria-label="Previous slide"
@@ -96,7 +97,7 @@ export function CarouselPreview({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => onActiveChange(activeIndex + 1)}
+          onClick={() => handleActiveChange(activeIndex + 1)}
           disabled={activeIndex >= slides.length - 1}
           className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 shadow-sm hover:bg-white h-9 w-9"
           aria-label="Next slide"
@@ -111,7 +112,7 @@ export function CarouselPreview({
           {slides.map((_, i) => (
             <button
               key={i}
-              onClick={() => onActiveChange(i)}
+              onClick={() => handleActiveChange(i)}
               className={`h-2 rounded-full transition-[width,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] ${
                 i === activeIndex
                   ? "w-6 bg-accent"

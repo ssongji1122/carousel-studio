@@ -3,10 +3,13 @@ import { spawn } from "child_process";
 import crossSpawn from "cross-spawn";
 import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
 import { resolveActiveBrand } from "@/lib/resolve-brand";
+import { updateBrand } from "@/lib/brand";
+import { getActiveProjectId } from "@/lib/workspace";
 import { buildBrandImportPrompt } from "@/lib/brand-import-prompt";
-import { fetchInstagramProfile, extractPalette, profileImageUrls } from "@/lib/instagram-brand";
+import { fetchInstagramProfile, extractPalette, profileImageUrls, downloadFeedImages } from "@/lib/instagram-brand";
 import { fetchWebsiteSignals, resolveBrandWebsite } from "@/lib/website-brand";
 import { buildBrandDoc, type BrandSources } from "@/lib/brand-doc";
+import { getRequestOrigin } from "@/lib/request-origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +40,8 @@ export async function POST(request: NextRequest) {
   // which one is the accent/main — Claude maps by dominance, but a brand's
   // accent is often a low-frequency color a human spots instantly.
   let extractedPalette: string[] = [];
+  // Feed images saved to /public/uploads so they can be placed into slides.
+  let imageAssets: string[] = [];
   if (instagram || website) {
     try {
       const sources: BrandSources = {};
@@ -49,6 +54,11 @@ export async function POST(request: NextRequest) {
           profile.profilePicUrl ?? undefined
         );
         sources.ig = { profile, palette };
+        // Save the feed images so the user's carousels can use real photos.
+        imageAssets = await downloadFeedImages(
+          instagram,
+          profile.posts.map((p) => p.imageUrl).filter((u): u is string => !!u)
+        );
         // No website given? Discover the official site from the profile's
         // bio links (unwrapping IG redirects and litt.ly aggregators).
         if (!siteUrl) {
@@ -84,7 +94,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "docs too large" }, { status: 413 });
   }
 
-  const prompt = buildBrandImportPrompt(docs);
+  const prompt = buildBrandImportPrompt(docs, getRequestOrigin(request));
   const claudePath = getClaudePath();
   const isWindowsShim =
     process.platform === "win32" && /\.(cmd|bat)$/i.test(claudePath);
@@ -117,6 +127,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Brand import failed" }, { status: 502 });
   }
 
+  // Attach the saved feed images to the brand so carousels can use them as media.
+  if (imageAssets.length) {
+    await updateBrand(await getActiveProjectId(), { imageAssets });
+  }
   const updated = await resolveActiveBrand();
   return NextResponse.json({ ...updated, extractedPalette });
 }

@@ -6,6 +6,7 @@ import { mkdir, readFile } from "fs/promises";
 import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
 import { resolveActiveBrand } from "@/lib/resolve-brand";
 import { buildBrandGeneratePrompt, type BrandBrief } from "@/lib/brand-generate-prompt";
+import { getRequestOrigin } from "@/lib/request-origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
   const genDir = path.resolve(process.cwd(), "data", "generated");
   await mkdir(genDir, { recursive: true });
 
-  const prompt = buildBrandGeneratePrompt(brief, genDir);
+  const prompt = buildBrandGeneratePrompt(brief, genDir, getRequestOrigin(request));
   const claudePath = getClaudePath();
   const isWindowsShim =
     process.platform === "win32" && /\.(cmd|bat)$/i.test(claudePath);
