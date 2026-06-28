@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Layers, Calendar, SlidersHorizontal, Trash2, Copy } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
@@ -174,12 +175,12 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <a
+              <Link
                 href="/plans"
                 className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-accent transition-colors"
               >
                 시리즈로 기획
-              </a>
+              </Link>
               <Button onClick={() => setShowCreateDialog(true)} variant="accent">
                 <Plus className="h-4 w-4" />
                 새 캐로셀

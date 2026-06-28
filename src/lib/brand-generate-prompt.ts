@@ -12,7 +12,13 @@ export interface BrandBrief {
   avoid?: string;
 }
 
-export function buildBrandGeneratePrompt(brief: BrandBrief, genDir: string): string {
+const DEFAULT_API_BASE_URL = "http://localhost:3000";
+
+export function buildBrandGeneratePrompt(
+  brief: BrandBrief,
+  genDir: string,
+  apiBaseUrl = DEFAULT_API_BASE_URL
+): string {
   return `당신은 브랜드 디자인 도우미입니다. 아래 답변만으로 브랜드를 설계하세요(기존 문서 없음).
 
 ## 입력
@@ -37,7 +43,7 @@ export function buildBrandGeneratePrompt(brief: BrandBrief, genDir: string): str
 
 ### 2. 적용 — brand API에 PUT (Bash curl, 한 번만)
 \`\`\`bash
-curl -s -X PUT http://localhost:3000/api/brand -H "Content-Type: application/json" -d '{
+curl -s -X PUT ${apiBaseUrl}/api/brand -H "Content-Type: application/json" -d '{
   "name":"...","colors":{"primary":"#...","secondary":"#...","accent":"#...","background":"#...","surface":"#...","line":"#...","dark":"#...","accentDark":"#...","eucalyptus":"#...","dusty":"#...","soot":"#..."},
   "fonts":{"heading":"...","body":"...","mono":"..."},
   "styleKeywords":["..."],

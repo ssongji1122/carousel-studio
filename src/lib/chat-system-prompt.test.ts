@@ -1,11 +1,23 @@
 import { describe, it, expect } from "vitest";
 import { buildSystemPrompt } from "@/lib/chat-system-prompt";
 import { STUDIO_SOLUTA_SEED } from "@/lib/brand-seed";
+import type { Carousel } from "@/types/carousel";
 
-function carousel(channel: "instagram" | "threads") {
-  return { id: "c1", name: "t", aspectRatio: "4:5", channel, slides: [],
-    referenceImages: [], chatSessionId: null, isTemplate: false, tags: [],
-    createdAt: "", updatedAt: "" } as any;
+function carousel(channel: "instagram" | "threads"): Carousel {
+  return {
+    id: "c1",
+    projectId: "studio-soluta",
+    name: "t",
+    aspectRatio: "4:5",
+    channel,
+    slides: [],
+    referenceImages: [],
+    chatSessionId: null,
+    isTemplate: false,
+    tags: [],
+    createdAt: "",
+    updatedAt: "",
+  };
 }
 
 describe("buildSystemPrompt chain", () => {
@@ -23,5 +35,12 @@ describe("buildSystemPrompt chain", () => {
   it("switches voice by channel", () => {
     expect(buildSystemPrompt(STUDIO_SOLUTA_SEED, carousel("instagram"))).toContain("합니다체");
     expect(buildSystemPrompt(STUDIO_SOLUTA_SEED, carousel("threads"))).toMatch(/캐주얼|구어체/);
+  });
+  it("uses the current app origin for local API curl commands", () => {
+    const p = buildSystemPrompt(STUDIO_SOLUTA_SEED, carousel("instagram"), {
+      apiBaseUrl: "http://localhost:3200",
+    });
+    expect(p).toContain("http://localhost:3200/api/carousels/c1/slides");
+    expect(p).not.toContain("http://localhost:3000/api/carousels/c1/slides");
   });
 });

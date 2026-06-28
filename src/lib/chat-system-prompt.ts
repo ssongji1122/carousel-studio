@@ -3,11 +3,20 @@ import type { Carousel } from "@/types/carousel";
 import type { StylePreset } from "@/types/style-preset";
 import { DIMENSIONS, MAX_SLIDES } from "@/types/carousel";
 
+const DEFAULT_API_BASE_URL = "http://localhost:3000";
+
+interface SystemPromptOptions {
+  readonly stylePreset?: StylePreset | null;
+  readonly apiBaseUrl?: string;
+}
+
 export function buildSystemPrompt(
   brand: BrandConfig,
   carousel?: Carousel | null,
-  stylePreset?: StylePreset | null
+  options: SystemPromptOptions = {}
 ): string {
+  const stylePreset = options.stylePreset ?? null;
+  const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL;
   const brandSection = brand.name
     ? `## Brand identity
 - Name: ${brand.name}
@@ -15,7 +24,17 @@ export function buildSystemPrompt(
 - Background: ${brand.colors.background} | Surface: ${brand.colors.surface}
 - Heading font: "${brand.fonts.heading}" | Body font: "${brand.fonts.body}"
 - Logo: ${brand.logoPath ? brand.logoPath : "none"}
-- Style: ${brand.styleKeywords.length > 0 ? brand.styleKeywords.join(", ") : "professional, clean"}`
+- Style: ${brand.styleKeywords.length > 0 ? brand.styleKeywords.join(", ") : "professional, clean"}${
+        brand.imageAssets?.length
+          ? `\n\n## Brand photos (from the Instagram feed) — put some into slides
+These are the brand's real feed images. Place them into the COVER and 1-2 point
+slides as media (a framed image with caption) so the carousel mixes real photos
+with text — not text only. Keep the rest text-only for rhythm.
+Available: ${brand.imageAssets.map((p) => `"${p}"`).join(", ")}
+To make an image slide, include "media" in the slide POST:
+{"role":"hook","headline":"...","body":"...","media":{"type":"image","src":"/uploads/...","fit":"cover","source":"uploaded"}}`
+          : ""
+      }`
     : `## Brand not configured
 Use professional defaults: dark text on white/light backgrounds, Inter font, clean minimal style.`;
 
@@ -81,30 +100,30 @@ ${chainSection}
 ## API — Use curl for all operations
 
 ### Create a slide (statement):
-curl -s -X POST http://localhost:3000/api/carousels/${carousel?.id || "{ID}"}/slides \\
+curl -s -X POST ${apiBaseUrl}/api/carousels/${carousel?.id || "{ID}"}/slides \\
   -H "Content-Type: application/json" \\
   -d '{"role": "hook", "headline": "HEADLINE", "body": "BODY", "items": []}'
 
 ### Create a list slide (body empty, items filled):
-curl -s -X POST http://localhost:3000/api/carousels/${carousel?.id || "{ID}"}/slides \\
+curl -s -X POST ${apiBaseUrl}/api/carousels/${carousel?.id || "{ID}"}/slides \\
   -H "Content-Type: application/json" \\
   -d '{"role": "body", "headline": "HEADLINE", "body": "", "items": ["항목1", "항목2", "항목3"]}'
 
 ### Update a slide:
-curl -s -X PUT http://localhost:3000/api/carousels/${carousel?.id || "{ID}"}/slides/{SLIDE_ID} \\
+curl -s -X PUT ${apiBaseUrl}/api/carousels/${carousel?.id || "{ID}"}/slides/{SLIDE_ID} \\
   -H "Content-Type: application/json" \\
   -d '{"role": "body", "headline": "UPDATED HEADLINE", "body": "UPDATED BODY", "items": []}'
 
 ### Delete a slide:
-curl -s -X DELETE http://localhost:3000/api/carousels/${carousel?.id || "{ID}"}/slides/{SLIDE_ID}
+curl -s -X DELETE ${apiBaseUrl}/api/carousels/${carousel?.id || "{ID}"}/slides/{SLIDE_ID}
 
 ### Save caption + hashtags:
-curl -s -X PUT http://localhost:3000/api/carousels/${carousel?.id || "{ID}"}/caption \\
+curl -s -X PUT ${apiBaseUrl}/api/carousels/${carousel?.id || "{ID}"}/caption \\
   -H "Content-Type: application/json" \\
   -d '{"caption": "Your caption text...", "hashtags": ["tag1", "tag2", "tag3"]}'
 
 ### Save as style preset:
-curl -s -X POST http://localhost:3000/api/style-presets \\
+curl -s -X POST ${apiBaseUrl}/api/style-presets \\
   -H "Content-Type: application/json" \\
   -d '{"name": "Style Name", "designRules": "description of visual rules...", "aspectRatio": "${carousel?.aspectRatio || "4:5"}"}'
 

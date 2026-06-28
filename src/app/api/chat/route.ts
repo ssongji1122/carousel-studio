@@ -6,6 +6,7 @@ import { buildSystemPrompt } from "@/lib/chat-system-prompt";
 import { resolveBrandForCarousel, resolveActiveBrand } from "@/lib/resolve-brand";
 import { getCarousel } from "@/lib/carousels";
 import { getPreset } from "@/lib/style-presets";
+import { getRequestOrigin } from "@/lib/request-origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,7 +54,10 @@ export async function POST(request: NextRequest) {
     : await resolveActiveBrand();
   const carousel = carouselId ? await getCarousel(carouselId) : null;
   const stylePreset = stylePresetId ? await getPreset(stylePresetId) : null;
-  const systemPrompt = buildSystemPrompt(brand, carousel, stylePreset);
+  const systemPrompt = buildSystemPrompt(brand, carousel, {
+    stylePreset,
+    apiBaseUrl: getRequestOrigin(request),
+  });
 
   const claudePath = getClaudePath();
   const abortController = new AbortController();

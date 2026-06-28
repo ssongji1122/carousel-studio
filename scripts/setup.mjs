@@ -85,32 +85,30 @@ function seedDataFiles() {
   }
 
   const seeds = {
-    "brand.json": {
-      name: "",
-      colors: {
-        primary: "#1a1a2e",
-        secondary: "#16213e",
-        accent: "#e94560",
-        background: "#ffffff",
-        surface: "#f5f5f5",
-      },
-      fonts: { heading: "Inter", body: "Inter" },
-      customFonts: [],
-      logoPath: null,
-      styleKeywords: [],
-      createdAt: "",
-      updatedAt: "",
+    "workspace.json": {
+      activeProjectId: "studio-soluta",
+      projects: [
+        {
+          id: "studio-soluta",
+          name: "studio.soluta",
+          defaultBrandId: "main",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
     },
+    "brands.json": {},
     "carousels.json": { carousels: [] },
     "templates.json": { templates: [] },
     "staged-actions.json": { actions: [] },
     "style-presets.json": { presets: [] },
+    "plans.json": { plans: [] },
   };
 
   for (const [name, contents] of Object.entries(seeds)) {
     const filePath = path.join(dataDir, name);
     if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify(contents), "utf-8");
+      fs.writeFileSync(filePath, JSON.stringify(contents, null, 2), "utf-8");
       log(`  Created ${path.relative(ROOT, filePath)}`);
     }
   }

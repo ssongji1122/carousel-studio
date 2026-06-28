@@ -39,6 +39,7 @@ export interface BrandConfig {
   logoPath: string | null;
   styleKeywords: string[];
   voice: BrandVoice;
+  imageAssets?: string[]; // saved feed-image paths (from Instagram) for carousel media
   createdAt: string;
   updatedAt: string;
 }

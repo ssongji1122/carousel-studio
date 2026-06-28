@@ -5,13 +5,14 @@ import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
 import { getPlan } from "@/lib/plans";
 import { resolveBrandForPlan } from "@/lib/resolve-brand";
 import { buildPlannerPrompt } from "@/lib/plan-system-prompt";
+import { getRequestOrigin } from "@/lib/request-origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export async function POST(
-  _req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -26,7 +27,7 @@ export async function POST(
   }
 
   const brand = await resolveBrandForPlan(id);
-  const prompt = buildPlannerPrompt(brand, plan);
+  const prompt = buildPlannerPrompt(brand, plan, getRequestOrigin(request));
 
   const claudePath = getClaudePath();
   const isWindowsShim =

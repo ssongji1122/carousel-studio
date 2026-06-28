@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { PlanItemTable } from "@/components/plan/PlanItemTable";
@@ -128,9 +129,9 @@ export default function PlanDetailPage({ params }: PageProps) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4">
         <p className="text-lg font-semibold">Plan not found</p>
-        <a href="/plans" className="text-sm text-accent underline">
+        <Link href="/plans" className="text-sm text-accent underline">
           Back to plans
-        </a>
+        </Link>
       </div>
     );
   }
