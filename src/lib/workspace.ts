@@ -4,16 +4,56 @@ import type { Workspace, Project } from "@/types/project";
 
 const FILE = "workspace.json";
 
-const DEFAULT_PROJECT: Project = {
-  id: "studio-soluta",
-  name: "studio.soluta",
-  defaultBrandId: "main",
-  createdAt: "",
-  updatedAt: "",
-};
+const DEFAULT_PROJECTS: Project[] = [
+  {
+    id: "studio-soluta",
+    name: "studio.soluta",
+    defaultBrandId: "main",
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "sample-ordinal",
+    name: "ORDINAL EDITION",
+    defaultBrandId: "main",
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "sample-rose-shaker",
+    name: "로즈쉐이커",
+    defaultBrandId: "main",
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "sample-price",
+    name: "프라이스",
+    defaultBrandId: "main",
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "sample-momspepper",
+    name: "맘스페퍼",
+    defaultBrandId: "main",
+    createdAt: "",
+    updatedAt: "",
+  },
+  {
+    id: "sample-pogon",
+    name: "포곤",
+    defaultBrandId: "main",
+    createdAt: "",
+    updatedAt: "",
+  },
+];
 
 function defaultWorkspace(): Workspace {
-  return { activeProjectId: "studio-soluta", projects: [DEFAULT_PROJECT] };
+  return {
+    activeProjectId: "studio-soluta",
+    projects: DEFAULT_PROJECTS.map((project) => ({ ...project })),
+  };
 }
 
 function slugify(name: string): string {

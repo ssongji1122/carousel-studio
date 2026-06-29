@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
-import crossSpawn from "cross-spawn";
 import path from "path";
 import { mkdir, readFile } from "fs/promises";
-import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
+import {
+  hasAvailableAgentProvider,
+  isAgentChainError,
+  runAgentWithFallback,
+} from "@/lib/agent-providers";
 import { resolveActiveBrand } from "@/lib/resolve-brand";
 import { buildBrandGeneratePrompt, type BrandBrief } from "@/lib/brand-generate-prompt";
 
@@ -15,8 +17,11 @@ export const maxDuration = 300;
 // Claude infers colors/fonts/voice from the brief, PUTs them to /api/brand,
 // and writes brand.md + design.md takeaway docs. Returns the brand + both docs.
 export async function POST(request: NextRequest) {
-  if (!isClaudeAvailable()) {
-    return NextResponse.json({ error: "Claude CLI not found" }, { status: 503 });
+  if (!hasAvailableAgentProvider()) {
+    return NextResponse.json(
+      { error: "No AI agent provider found. Install Claude, Codex, or Cursor Agent CLI." },
+      { status: 503 }
+    );
   }
 
   let body: unknown;
@@ -41,36 +46,27 @@ export async function POST(request: NextRequest) {
   const genDir = path.resolve(process.cwd(), "data", "generated");
   await mkdir(genDir, { recursive: true });
 
-  const prompt = buildBrandGeneratePrompt(brief, genDir);
-  const claudePath = getClaudePath();
-  const isWindowsShim =
-    process.platform === "win32" && /\.(cmd|bat)$/i.test(claudePath);
-  const spawner = isWindowsShim ? crossSpawn : spawn;
+  const prompt = buildBrandGeneratePrompt(
+    brief,
+    genDir,
+    new URL(request.url).origin
+  );
 
   try {
-    await new Promise<void>((resolve, reject) => {
-      const child = spawner(
-        claudePath,
-        [
-          "-p",
-          "답변으로 브랜드 색·폰트·보이스를 정해 brand API에 PUT하고 brand.md·design.md를 작성해줘.",
-          "--append-system-prompt",
-          prompt,
-          "--allowedTools",
-          "Bash Write",
-          "--max-budget-usd",
-          "1.00",
-          "--name",
-          "carrusel-brand-generate",
-        ],
-        { cwd: process.cwd(), stdio: "ignore" }
-      );
-      child.on("error", reject);
-      child.on("close", (code) =>
-        code === 0 ? resolve() : reject(new Error("Claude CLI exited " + code))
-      );
+    await runAgentWithFallback({
+      name: "carrusel-brand-generate",
+      userPrompt: "답변으로 브랜드 색·폰트·보이스를 정해 brand API에 PUT하고 brand.md·design.md를 작성해줘.",
+      systemPrompt: prompt,
+      cwd: process.cwd(),
+      claudeAllowedTools: ["Bash", "Write"],
     });
-  } catch {
+  } catch (error) {
+    if (isAgentChainError(error)) {
+      return NextResponse.json(
+        { error: error.message, attempts: error.attempts },
+        { status: error.status }
+      );
+    }
     return NextResponse.json({ error: "Brand generation failed" }, { status: 502 });
   }
 

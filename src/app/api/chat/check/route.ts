@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { isClaudeAvailable } from "@/lib/claude-path";
+import { listAgentProviders } from "@/lib/agent-providers";
 
 export async function GET() {
-  return NextResponse.json({ available: isClaudeAvailable() });
+  const providers = listAgentProviders();
+  return NextResponse.json({
+    available: providers.some((provider) => provider.available),
+    providers,
+  });
 }

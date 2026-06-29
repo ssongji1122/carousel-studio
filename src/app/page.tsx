@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Layers, Calendar, SlidersHorizontal, Trash2, Copy } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
@@ -168,18 +169,18 @@ export default function DashboardPage() {
         <div className="max-w-5xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold">studio.soluta carousels</h1>
+              <h1 className="text-2xl font-bold">Carousel Studio</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 인스타·Threads 캐로셀을 브랜드 톤으로 한 번에
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <a
+              <Link
                 href="/plans"
                 className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-accent transition-colors"
               >
                 시리즈로 기획
-              </a>
+              </Link>
               <Button onClick={() => setShowCreateDialog(true)} variant="accent">
                 <Plus className="h-4 w-4" />
                 새 캐로셀

@@ -20,10 +20,80 @@ export interface BrandFonts {
   mono?: string;
 }
 
+export type BrandEvidenceSource =
+  | "brand-doc"
+  | "website-css"
+  | "website-og"
+  | "website-image"
+  | "instagram-profile"
+  | "instagram-feed";
+
+export interface BrandEvidence {
+  source: BrandEvidenceSource;
+  label: string;
+  value: string;
+  confidence: number;
+}
+
+export interface BrandColorCandidate {
+  hex: string;
+  sources: BrandEvidenceSource[];
+  score: number;
+  roleHint?: "primary" | "secondary" | "accent" | "background" | "surface" | "line";
+}
+
+export interface BrandFontCandidate {
+  family: string;
+  sources: BrandEvidenceSource[];
+  score: number;
+  roleHint?: "heading" | "body" | "mono";
+}
+
+export interface BrandTokenDecision {
+  value: string;
+  source: BrandEvidenceSource;
+  confidence: number;
+  reason: string;
+}
+
+export interface BrandAnalysis {
+  evidence: BrandEvidence[];
+  colorCandidates: BrandColorCandidate[];
+  fontCandidates: BrandFontCandidate[];
+  decisions: {
+    primaryColor: BrandTokenDecision;
+    accentColor: BrandTokenDecision;
+    backgroundColor: BrandTokenDecision;
+    headingFont: BrandTokenDecision;
+    bodyFont: BrandTokenDecision;
+  };
+  appliedAt: string;
+}
+
 export interface BrandVoice {
   ending: string;
   banned: string[];
   keywords: string[];
+  language?: BrandLanguage;
+}
+
+export interface BrandLanguage {
+  preferredPhrases: string[];
+  avoidPhrases: string[];
+  headlinePatterns: string[];
+  writingRules: string[];
+  sampleLines: string[];
+}
+
+export interface BrandKit {
+  description: string;
+  metaphor: string;
+  character: string;
+  emotionalRange: string[];
+  visualTone: string[];
+  forbiddenDirections: string[];
+  repeatLimits: string[];
+  assetHints: string[];
 }
 
 export interface CustomFont {
@@ -39,6 +109,8 @@ export interface BrandConfig {
   logoPath: string | null;
   styleKeywords: string[];
   voice: BrandVoice;
+  kit?: BrandKit;
+  analysis?: BrandAnalysis;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,23 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
-import crossSpawn from "cross-spawn";
-import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
+import {
+  hasAvailableAgentProvider,
+  isAgentChainError,
+  runAgentWithFallback,
+} from "@/lib/agent-providers";
 import { getPlan } from "@/lib/plans";
-import { resolveBrandForPlan } from "@/lib/resolve-brand";
 import { buildPlannerPrompt } from "@/lib/plan-system-prompt";
+import {
+  getProjectContext,
+  isProjectContextError,
+  requireConfiguredProjectContext,
+  type ProjectContext,
+} from "@/lib/project-context";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export async function POST(
-  _req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
 
-  if (!isClaudeAvailable()) {
-    return NextResponse.json({ error: "Claude CLI not found" }, { status: 503 });
+  if (!hasAvailableAgentProvider()) {
+    return NextResponse.json(
+      { error: "No AI agent provider found. Install Claude, Codex, or Cursor Agent CLI." },
+      { status: 503 }
+    );
   }
 
   const plan = await getPlan(id);
@@ -25,43 +35,42 @@ export async function POST(
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   }
 
-  const brand = await resolveBrandForPlan(id);
-  const prompt = buildPlannerPrompt(brand, plan);
-
-  const claudePath = getClaudePath();
-  const isWindowsShim =
-    process.platform === "win32" && /\.(cmd|bat)$/i.test(claudePath);
-  const spawner = isWindowsShim ? crossSpawn : spawn;
+  let context: ProjectContext;
+  try {
+    context = requireConfiguredProjectContext(
+      await getProjectContext(plan.projectId)
+    );
+  } catch (error) {
+    if (isProjectContextError(error)) {
+      return NextResponse.json(
+        { error: error.message, code: error.code, projectId: error.projectId },
+        { status: error.status }
+      );
+    }
+    throw error;
+  }
+  const prompt = buildPlannerPrompt(
+    context.brand,
+    plan,
+    new URL(request.url).origin,
+    context.creativeGuides
+  );
 
   try {
-    await new Promise<void>((resolve, reject) => {
-      const child = spawner(
-        claudePath,
-        [
-          "-p",
-          `시리즈 플랜 ${plan.id}의 필러와 주제 ${plan.count}개를 만들어 items API에 POST해줘.`,
-          "--append-system-prompt",
-          prompt,
-          "--allowedTools",
-          "Bash",
-          "--max-budget-usd",
-          "1.00",
-          "--name",
-          "carrusel-plan",
-        ],
-        {
-          cwd: process.cwd(),
-          stdio: "ignore",
-        }
-      );
-      child.on("error", reject);
-      child.on("close", (code) =>
-        code === 0
-          ? resolve()
-          : reject(new Error("Claude CLI exited " + code))
-      );
+    await runAgentWithFallback({
+      name: "carrusel-plan",
+      userPrompt: `시리즈 플랜 ${plan.id}의 필러와 주제 ${plan.count}개를 만들어 items API에 POST해줘.`,
+      systemPrompt: prompt,
+      cwd: process.cwd(),
+      claudeAllowedTools: ["Bash"],
     });
-  } catch {
+  } catch (error) {
+    if (isAgentChainError(error)) {
+      return NextResponse.json(
+        { error: error.message, attempts: error.attempts },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: "Plan generation failed" },
       { status: 502 }

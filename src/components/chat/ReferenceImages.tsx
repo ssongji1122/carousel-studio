@@ -86,11 +86,8 @@ export function ReferenceImages({
 
   return (
     <div className="border-b border-border">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2">
-        <span className="text-xs font-medium text-muted-foreground">
-          Reference Images
-        </span>
+        <span className="text-xs font-medium text-muted-foreground">레퍼런스</span>
         <Button
           variant="ghost"
           size="sm"
@@ -99,25 +96,22 @@ export function ReferenceImages({
           className="h-6 text-xs gap-1 px-2"
         >
           <ImagePlus className="h-3 w-3" />
-          {uploading ? "Uploading..." : "Add"}
+          {uploading ? "올리는 중" : "추가"}
         </Button>
       </div>
 
-      {/* Images grid or drop zone */}
       {images.length === 0 ? (
         <div
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
           onClick={handleClick}
-          className="mx-4 mb-3 border border-dashed border-border rounded-lg p-3 text-center cursor-pointer hover:border-muted-foreground/50 hover:bg-muted/30 transition-colors"
+          className="mx-4 mb-3 flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-left transition-colors hover:border-muted-foreground/50 hover:bg-muted/30"
         >
-          <ImagePlus className="h-4 w-4 mx-auto text-muted-foreground/50 mb-1" />
-          <p className="text-[10px] text-muted-foreground">
-            Drop reference images here
-          </p>
-          <p className="text-[9px] text-muted-foreground/70">
-            색·레이아웃을 분석해 이 캐러셀에 반영합니다
-          </p>
+          <ImagePlus className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+          <div>
+            <p className="text-[11px] text-muted-foreground">이미지를 넣어 스타일을 참고합니다</p>
+            <p className="text-[10px] text-muted-foreground/70">클릭하거나 끌어다 놓기</p>
+          </div>
         </div>
       ) : (
         <div className="flex gap-2 px-4 pb-3 overflow-x-auto">
@@ -145,7 +139,6 @@ export function ReferenceImages({
                   ))}
                 </div>
               ) : null}
-              {/* Remove button */}
               <button
                 onClick={() => handleRemove(img.id)}
                 className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -155,7 +148,6 @@ export function ReferenceImages({
               </button>
             </div>
           ))}
-          {/* Add more button */}
           <button
             onClick={handleClick}
             className="shrink-0 w-14 h-14 rounded-lg border border-dashed border-border flex items-center justify-center hover:border-muted-foreground/50 transition-colors"
@@ -165,7 +157,6 @@ export function ReferenceImages({
         </div>
       )}
 
-      {/* Preview modal */}
       {previewUrl && (
         <div
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-8"

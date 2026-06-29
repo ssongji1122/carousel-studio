@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import archiver from "archiver";
 import { getCarousel } from "@/lib/carousels";
 import { exportAllSlides } from "@/lib/export-slides";
+import { validateCarouselQuality } from "@/lib/carousel-quality";
+import { getProjectContext } from "@/lib/project-context";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
+
+const ZIP_FALLBACK_NAME_MAX = 48;
 
 export async function POST(
   _request: Request,
@@ -20,6 +24,18 @@ export async function POST(
 
   if (carousel.slides.length === 0) {
     return NextResponse.json({ error: "No slides to export" }, { status: 400 });
+  }
+  const context = await getProjectContext(carousel.projectId);
+  const quality = validateCarouselQuality(
+    carousel,
+    context.brand,
+    context.creativeGuides
+  );
+  if (!quality.ok) {
+    return NextResponse.json(
+      { error: "Quality gate failed", code: "quality_gate_failed", quality },
+      { status: 422 }
+    );
   }
 
   try {
@@ -60,7 +76,7 @@ export async function POST(
     return new Response(new Uint8Array(zipBuffer), {
       headers: {
         "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename="carousel-${carousel.name.replace(/[^a-zA-Z0-9-_]/g, "_")}.zip"`,
+        "Content-Disposition": buildZipContentDisposition(carousel.name, carousel.id),
       },
     });
   } catch (error) {
@@ -71,4 +87,15 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+function buildZipContentDisposition(name: string, id: string): string {
+  const utf8Name = `carousel-${name.trim() || id}.zip`;
+  const asciiStem = name
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9-_]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, ZIP_FALLBACK_NAME_MAX);
+  const fallbackName = `carousel-${asciiStem || id.slice(0, 8)}.zip`;
+  return `attachment; filename="${fallbackName}"; filename*=UTF-8''${encodeURIComponent(utf8Name)}`;
 }

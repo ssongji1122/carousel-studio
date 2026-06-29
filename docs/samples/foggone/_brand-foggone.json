@@ -1,1 +1,100 @@
-{"name":"포곤 FOGGONE","colors":{"primary":"#507041","secondary":"#898785","accent":"#5A87B0","background":"#FAFAFA","surface":"#D9EBF7","line":"#D9D8D6","dark":"#507041","accentDark":"#5A87B0","eucalyptus":"#507041","dusty":"#5A87B0","soot":"#898785"},"fonts":{"heading":"Pretendard","body":"Pretendard","mono":"DM Mono"},"customFonts":[],"logoPath":null,"styleKeywords":["차분한","일상적인","담백한","응원하는"],"voice":{"ending":"합니다체","banned":["혁신적","혁신","융합","솔루션","시너지","패러다임","선도","최고의","차세대","임팩트","스케일","피벗"],"keywords":["집중","몰입","리프레시","루틴","전환","응원","맑게"]},"createdAt":"2026-06-23T15:16:22.843Z","updatedAt":"2026-06-24T01:22:11.336Z"}
+{
+  "name": "포곤 FOGGONE",
+  "colors": {
+    "primary": "#2F3A34",
+    "secondary": "#727771",
+    "accent": "#8FA394",
+    "background": "#F7F5F0",
+    "surface": "#E8ECE4",
+    "line": "#D8D8CF",
+    "dark": "#202724",
+    "accentDark": "#B8C6BA",
+    "eucalyptus": "#9BAE9F",
+    "dusty": "#9DA8AF",
+    "soot": "#3B4240"
+  },
+  "fonts": {
+    "heading": "Pretendard",
+    "body": "Pretendard",
+    "mono": "DM Mono"
+  },
+  "customFonts": [],
+  "logoPath": null,
+  "styleKeywords": [
+    "fog-clearing",
+    "quiet recovery",
+    "low contrast",
+    "soft negative space",
+    "routine editorial",
+    "calm but not generic"
+  ],
+  "voice": {
+    "ending": "합니다체",
+    "banned": [
+      "혁신적",
+      "혁신",
+      "융합",
+      "솔루션",
+      "시너지",
+      "패러다임",
+      "선도",
+      "최고의",
+      "차세대",
+      "임팩트",
+      "스케일",
+      "피벗",
+      "과장된 뷰티 광고",
+      "병원식 효능 표현",
+      "generic skincare tips",
+      "효능 보장",
+      "치료",
+      "즉각 개선",
+      "완치"
+    ],
+    "keywords": [
+      "예민함",
+      "지침",
+      "회복",
+      "차분함",
+      "흐림",
+      "맑아짐",
+      "정돈",
+      "전환",
+      "루틴",
+      "호흡",
+      "잔잔함",
+      "집중",
+      "낮은 대비",
+      "여백"
+    ]
+  },
+  "kit": {
+    "description": "흐린 생각과 감각을 차분히 정돈해 맑은 루틴으로 전환시키는 브랜드",
+    "metaphor": "안개가 걷히며 필요한 것만 남는 전환",
+    "character": "전용 캐릭터 미정",
+    "emotionalRange": ["흐림", "지침", "정돈", "회복", "맑아짐"],
+    "visualTone": ["여백", "낮은 대비", "부드러운 색", "얇은 선", "조용한 리듬"],
+    "forbiddenDirections": [
+      "과장된 뷰티 광고",
+      "병원식 효능 표현",
+      "일반적인 피부 관리 팁처럼 보이는 구성",
+      "자극적인 before-after",
+      "제작 도구 브랜드 노출",
+      "studio soluta 캐릭터 차용",
+      "고양이 또는 실타래 캐릭터 사용"
+    ],
+    "repeatLimits": [
+      "순하게, 차근차근 같은 안전한 표현을 반복하지 않는다",
+      "같은 배경 카드가 세 장 이상 이어지지 않게 한다"
+    ],
+    "assetHints": [
+      "흐림에서 선명함으로 바뀌는 단계",
+      "옅은 안개와 빛의 레이어",
+      "루틴 체크와 작은 전환 표시",
+      "얇은 선 기반 다이어그램",
+      "부드러운 질감의 여백 배경"
+    ]
+  },
+  "createdAt": "2026-06-23T15:16:22.843Z",
+  "updatedAt": "2026-06-27T00:00:00.000Z"
+}

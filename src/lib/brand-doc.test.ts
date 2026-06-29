@@ -23,6 +23,8 @@ const web: WebSignals = {
   ogDescription: "디자이너가 전하는 K-라이프스타일",
   ogImageUrl: "https://frice.kr/og.jpg",
   headings: ["정상석 클리커"],
+  copySnippets: ["디자이너가 전하는 일상 속 K-라이프스타일"],
+  imageAssets: [{ url: "https://frice.kr/character.png", source: "img", alt: "frice 캐릭터" }],
   fonts: ["Libre Franklin", "Pretendard"],
   cssColors: ["#2D3536"],
   ogPalette: ["#1D211A", "#E0DAD4"],
@@ -53,5 +55,9 @@ describe("buildBrandDoc", () => {
     expect(doc).toContain("Libre Franklin"); // web font wins over IG mood guess
     expect(doc).toContain("(IG) 정상석 클리커");
     expect(doc).toContain("(웹) 정상석 클리커");
+    expect(doc).toContain("(웹 문장) 디자이너가 전하는 일상 속 K-라이프스타일");
+    expect(doc).toContain("이미지·캐릭터 단서");
+    expect(doc).toContain("frice 캐릭터");
+    expect(doc).toContain("language.preferredPhrases");
   });
 });

@@ -1,7 +1,8 @@
 import type { BrandVoice } from "@/types/brand";
+import { voiceAvoidPhrases } from "@/lib/brand-language";
 
 export interface VoiceViolation {
-  kind: "banned" | "length" | "emoji" | "exclaim";
+  kind: "banned" | "avoid" | "length" | "emoji" | "exclaim";
   detail: string;
 }
 
@@ -15,6 +16,9 @@ export function checkVoice(
   const out: VoiceViolation[] = [];
   for (const w of voice.banned) {
     if (w && text.includes(w)) out.push({ kind: "banned", detail: w });
+  }
+  for (const phrase of voiceAvoidPhrases(voice)) {
+    if (phrase && text.includes(phrase)) out.push({ kind: "avoid", detail: phrase });
   }
   if ([...text].length > maxLen) out.push({ kind: "length", detail: `${[...text].length}/${maxLen}` });
   if (EMOJI.test(text)) out.push({ kind: "emoji", detail: "emoji found" });

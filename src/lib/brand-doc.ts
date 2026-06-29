@@ -68,6 +68,27 @@ export function buildBrandDoc({ ig, web }: BrandSources): string {
   }
   L.push("");
 
+  L.push("## 이미지·캐릭터 단서");
+  const imageAssets = web?.imageAssets ?? [];
+  if (imageAssets.length) {
+    for (const asset of imageAssets.slice(0, 10)) {
+      const meta = [
+        `source=${asset.source}`,
+        asset.alt ? `alt=${asset.alt}` : "",
+        asset.title ? `title=${asset.title}` : "",
+      ].filter(Boolean).join(" / ");
+      L.push(`- ${asset.url}${meta ? ` (${meta})` : ""}`);
+    }
+    L.push(
+      "",
+      "위 이미지에 패키지·마스코트·캐릭터가 보이면 kit.character와 kit.assetHints에 반드시 반영하세요.",
+      "이미지를 직접 볼 수 없는 실행 환경이면 kit.character를 '전용 캐릭터 미정'으로 두지 말고 '이미지 확인 필요: <핵심 이미지 URL>'로 남기세요."
+    );
+  } else {
+    L.push("- 없음");
+  }
+  L.push("");
+
   // 콘텐츠·보이스 단서
   L.push("## 콘텐츠·보이스 단서 (키워드·톤 추정용)");
   const series = (ig?.profile.posts ?? [])
@@ -76,14 +97,17 @@ export function buildBrandDoc({ ig, web }: BrandSources): string {
     .slice(0, 8);
   for (const s of series) L.push(`- (IG) ${s}`);
   for (const h of (web?.headings ?? []).slice(0, 6)) L.push(`- (웹) ${h}`);
-  if (!series.length && !(web?.headings.length)) L.push("- 없음");
+  for (const s of (web?.copySnippets ?? []).slice(0, 10)) L.push(`- (웹 문장) ${s}`);
+  if (!series.length && !(web?.headings.length) && !(web?.copySnippets.length)) L.push("- 없음");
   L.push("");
 
   // 보이스
   L.push("## 보이스");
   L.push("- 어미: 합니다체 (정중)");
   L.push(
-    "- 피할 단어: 혁신적, 혁신, 융합, 솔루션, 시너지, 패러다임, 선도, 최고의, 차세대, 임팩트, 스케일, 피벗"
+    "- 피할 단어: 혁신적, 혁신, 융합, 솔루션, 시너지, 패러다임, 선도, 최고의, 차세대, 임팩트, 스케일, 피벗",
+    "- language.preferredPhrases와 sampleLines는 위 IG/웹 원문 표현에서 뽑으세요.",
+    "- language.avoidPhrases에는 이 브랜드 소스에 없는 일반적 정리형 문장과 다른 브랜드식 표현을 넣으세요. 예: 기준이 필요합니다, 먼저 세 가지를 봅니다, 자극보다 정돈, 작은 루틴으로 전환, 흐린 날의 기준, 저장합니다."
   );
 
   return L.join("\n");

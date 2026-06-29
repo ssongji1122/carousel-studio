@@ -96,7 +96,7 @@ export function TopBar({
               onClick={() => editable && startEditing()}
               title={editable ? "Click to rename" : undefined}
             >
-              {title || "studio.soluta"}
+              {title || "Carousel Studio"}
             </span>
           )}
         </div>

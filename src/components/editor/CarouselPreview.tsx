@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SlideRenderer } from "./SlideRenderer";
@@ -30,11 +30,7 @@ export function CarouselPreview({
   onSlideSaved,
 }: CarouselPreviewProps) {
   const slide = slides[activeIndex];
-  const prevIndexRef = useRef(activeIndex);
-  const direction = activeIndex >= prevIndexRef.current ? 12 : -12;
-  useEffect(() => {
-    prevIndexRef.current = activeIndex;
-  }, [activeIndex]);
+  const direction = 12;
 
   if (!slide) {
     return (
@@ -54,9 +50,7 @@ export function CarouselPreview({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-[#f0f0f0]">
-      {/* Preview area with padding for arrows */}
       <div className="flex-1 relative min-h-0 p-8 px-14">
-        {/* Left arrow */}
         <Button
           variant="ghost"
           size="icon"
@@ -68,7 +62,6 @@ export function CarouselPreview({
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        {/* Slide fills the padded inner area */}
         <div
           key={slide.id}
           className="oc-slide-in relative w-full h-full"
@@ -92,20 +85,20 @@ export function CarouselPreview({
           <SafeZoneOverlay aspectRatio={aspectRatio} visible={showSafeZones && !editMode} />
         </div>
 
-        {/* Right arrow */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => onActiveChange(activeIndex + 1)}
           disabled={activeIndex >= slides.length - 1}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 shadow-sm hover:bg-white h-9 w-9"
+          className={`absolute top-1/2 z-10 h-9 w-9 -translate-y-1/2 bg-white/90 shadow-sm hover:bg-white ${
+            editMode ? "right-[318px]" : "right-2"
+          }`}
           aria-label="Next slide"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Slide counter dots */}
       {slides.length > 1 && (
         <div className="flex items-center justify-center gap-1.5 pb-3 shrink-0">
           {slides.map((_, i) => (
