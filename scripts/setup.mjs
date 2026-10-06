@@ -4,7 +4,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import crossSpawn from "cross-spawn";
+import { spawnSync } from "node:child_process";
+
+// setup은 npm install 전에 실행되므로 node_modules 패키지를 import 하지 않습니다.
+// Windows의 npm·where는 .cmd 파일이라 셸을 거쳐 실행합니다.
+const crossSpawn = {
+  sync: (cmd, args, opts = {}) =>
+    spawnSync(cmd, args, { shell: process.platform === "win32", ...opts }),
+};
 
 const ROOT = process.cwd();
 
