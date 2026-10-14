@@ -60,3 +60,7 @@ Slides store body-level HTML only (no `<html>`, `<head>`, `<!DOCTYPE>`). The `wr
 - Use Google Font family names in font-family declarations
 - NOT contain `<script>` tags (enforced by iframe sandbox)
 - Target the carousel's aspect ratio dimensions
+
+## 공통 프로젝트 규칙
+
+@AGENTS.md
