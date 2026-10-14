@@ -58,9 +58,8 @@ export function wrapSlideHtml(
     : "";
 
   let fontBlock = "";
-  if (options?.inlineFontCss) {
-    // For export: use inlined base64 @font-face CSS
-    fontBlock = `<style>${options.inlineFontCss}</style>${pretendardLink}`;
+  if (options?.inlineFontCss !== undefined) {
+    fontBlock = options.inlineFontCss ? `<style>${options.inlineFontCss}</style>` : "";
   } else if (googleFamilies.length > 0) {
     // For preview: use Google Fonts CDN link (Pretendard is not on Google Fonts)
     const params = googleFamilies

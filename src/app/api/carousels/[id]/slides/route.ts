@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { addSlide, reorderSlides, getCarousel } from "@/lib/carousels";
-import { getBrand } from "@/lib/brand";
+import { getProjectContext, isProjectContextError, requireConfiguredProjectContext } from "@/lib/project-context";
 import { buildSlideFromStructured } from "@/lib/slide-build";
+import { findDuplicateMediaSource } from "@/lib/carousel-quality";
+import { normalizeSlideStyle } from "@/lib/slide-style";
 import type { SlideRole, MediaRef, SlideTone } from "@/types/carousel";
 
 const TONES: readonly SlideTone[] = ["paper", "soft", "dark", "wine"];
@@ -17,7 +19,7 @@ export async function POST(
     const body = await request.json();
 
     // Structured input takes precedence over raw html
-    if (body.role !== undefined || body.headline !== undefined || body.body !== undefined || body.items !== undefined || body.tone !== undefined) {
+    if (body.role !== undefined || body.headline !== undefined || body.body !== undefined || body.items !== undefined || body.media !== undefined || body.tone !== undefined || body.style !== undefined) {
       const carousel = await getCarousel(id);
       if (!carousel) {
         return NextResponse.json(
@@ -33,13 +35,24 @@ export async function POST(
         items: Array.isArray(body.items) ? body.items.map((x: unknown) => String(x)) : [],
         media: (body.media ?? null) as MediaRef | null,
         tone: asTone(body.tone),
+        style: normalizeSlideStyle(body.style),
       };
+      const duplicateMedia = findDuplicateMediaSource(carousel, structured.media);
+      if (duplicateMedia) {
+        return NextResponse.json(
+          { error: duplicateMedia.message, code: duplicateMedia.code, issue: duplicateMedia },
+          { status: 409 }
+        );
+      }
 
-      const brand = await getBrand(carousel.projectId);
+      const context = requireConfiguredProjectContext(
+        await getProjectContext(carousel.projectId)
+      );
       const { html, violations } = buildSlideFromStructured(
         structured,
-        brand,
-        carousel.aspectRatio
+        context.brand,
+        carousel.aspectRatio,
+        carousel.characterSheet
       );
 
       const notes = typeof body.notes === "string" ? body.notes : "";
@@ -70,7 +83,13 @@ export async function POST(
       );
     }
     return NextResponse.json(slide, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (isProjectContextError(error)) {
+      return NextResponse.json(
+        { error: error.message, code: error.code, projectId: error.projectId },
+        { status: error.status }
+      );
+    }
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 }

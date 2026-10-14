@@ -17,11 +17,12 @@ const SYSTEM_FONTS = new Set(
   [
     "serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui",
     "ui-monospace", "-apple-system", "blinkmacsystemfont", "helvetica",
-    "helvetica neue", "arial", "tahoma", "verdana", "georgia", "times",
+    "helvetica neue", "arial", "arial black", "tahoma", "verdana", "georgia", "times",
     "times new roman", "courier", "courier new", "monaco", "consolas",
     "menlo", "andale mono", "dejavu sans mono", "pingfang tc", "pingfang sc",
     "sthei", "stheititc-light", "segoe ui", "roboto", "noto sans",
     "sukhumvit set", "inherit", "initial", "unset", "apple sd gothic neo",
+    "apple color emoji", "segoe ui emoji", "segoe ui symbol", "noto color emoji",
     "malgun gothic", "dotum", "gulim", "batang",
   ].map((s) => s.toLowerCase())
 );
@@ -43,9 +44,18 @@ export interface WebSignals {
   ogDescription: string;
   ogImageUrl: string | null;
   headings: string[];
+  copySnippets: string[];
+  imageAssets: WebImageAsset[];
   fonts: string[];
   cssColors: string[];
   ogPalette: string[];
+}
+
+export interface WebImageAsset {
+  url: string;
+  source: "og" | "img" | "icon" | "background";
+  alt?: string;
+  title?: string;
 }
 
 const metaContent = (html: string, re: RegExp): string => {
@@ -54,7 +64,7 @@ const metaContent = (html: string, re: RegExp): string => {
 };
 
 /** Parse the meta/OG fields and headings from a page's HTML. Pure. */
-export function parseHtmlMeta(html: string): Omit<WebSignals, "url" | "fonts" | "cssColors" | "ogPalette"> {
+export function parseHtmlMeta(html: string): Omit<WebSignals, "url" | "fonts" | "cssColors" | "ogPalette" | "imageAssets"> {
   const title = metaContent(html, /<title[^>]*>([^<]*)<\/title>/i);
   const description = metaContent(html, /<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i)
     || metaContent(html, /<meta[^>]*content=["']([^"']*)["'][^>]*name=["']description["']/i);
@@ -65,10 +75,89 @@ export function parseHtmlMeta(html: string): Omit<WebSignals, "url" | "fonts" | 
     || metaContent(html, /<meta[^>]*content=["']([^"']*)["'][^>]*property=["']og:image["']/i)
     || null;
   const headings = Array.from(html.matchAll(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi))
-    .map((m) => m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim())
+    .map((m) => cleanHtmlText(m[1]))
     .filter(Boolean)
     .slice(0, 8);
-  return { title, description, ogTitle, ogDescription, ogImageUrl, headings };
+  const copySnippets = Array.from(html.matchAll(/<(?:p|li|button|a|span)[^>]*>([\s\S]*?)<\/(?:p|li|button|a|span)>/gi))
+    .map((m) => cleanHtmlText(m[1]))
+    .filter((text) => text.length >= 4 && text.length <= 90)
+    .filter((text) => !/^(메뉴|검색|닫기|열기|로그인|회원가입)$/i.test(text))
+    .filter(uniqueInOrder)
+    .slice(0, 16);
+  return { title, description, ogTitle, ogDescription, ogImageUrl, headings, copySnippets };
+}
+
+export function extractWebsiteImageAssets(
+  html: string,
+  baseUrl: string,
+  ogImageUrl: string | null
+): WebImageAsset[] {
+  const assets: WebImageAsset[] = [];
+  const add = (asset: WebImageAsset) => {
+    if (!asset.url || assets.some((a) => a.url === asset.url)) return;
+    assets.push(asset);
+  };
+  if (ogImageUrl) add({ url: absolutizeUrl(ogImageUrl, baseUrl), source: "og" });
+
+  for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
+    const tag = m[0];
+    const src =
+      attr(tag, "src") ||
+      attr(tag, "data-src") ||
+      attr(tag, "data-original") ||
+      attr(tag, "data-lazy-src");
+    if (!src) continue;
+    add({
+      url: absolutizeUrl(src, baseUrl),
+      source: "img",
+      alt: attr(tag, "alt") || undefined,
+      title: attr(tag, "title") || undefined,
+    });
+  }
+
+  for (const m of html.matchAll(/<link\b[^>]*rel=["'][^"']*(?:icon|apple-touch-icon)[^"']*["'][^>]*>/gi)) {
+    const href = attr(m[0], "href");
+    if (href) add({ url: absolutizeUrl(href, baseUrl), source: "icon" });
+  }
+
+  for (const m of html.matchAll(/background(?:-image)?:\s*url\((["']?)([^"')]+)\1\)/gi)) {
+    const url = m[2];
+    if (url && !url.startsWith("data:")) {
+      add({ url: absolutizeUrl(url, baseUrl), source: "background" });
+    }
+  }
+
+  return assets.slice(0, 16);
+}
+
+function attr(tag: string, name: string): string {
+  const re = new RegExp(`${name}=[\"']([^\"']*)[\"']`, "i");
+  return tag.match(re)?.[1]?.trim() ?? "";
+}
+
+function absolutizeUrl(url: string, baseUrl: string): string {
+  try {
+    return new URL(url, baseUrl).href;
+  } catch {
+    return url;
+  }
+}
+
+function cleanHtmlText(value: string): string {
+  return value
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function uniqueInOrder(value: string, index: number, source: string[]): boolean {
+  return source.indexOf(value) === index;
 }
 
 /** Extract non-system font names from CSS/HTML text. Pure. */
@@ -299,6 +388,7 @@ export async function fetchWebsiteSignals(rawUrl: string): Promise<WebSignals> {
   const fonts = extractBrandFonts(combined);
   const cssColors = extractBrandColors(combined);
   const ogPalette = meta.ogImageUrl ? await extractPalette([meta.ogImageUrl]) : [];
+  const imageAssets = extractWebsiteImageAssets(html, url, meta.ogImageUrl);
 
-  return { url, ...meta, fonts, cssColors, ogPalette };
+  return { url, ...meta, imageAssets, fonts, cssColors, ogPalette };
 }

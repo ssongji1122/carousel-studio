@@ -3,6 +3,7 @@ import {
   parseHtmlMeta,
   extractBrandFonts,
   extractBrandColors,
+  extractWebsiteImageAssets,
   selectStylesheets,
   unwrapInstagramUrl,
   isAggregator,
@@ -16,13 +17,32 @@ describe("parseHtmlMeta", () => {
     <meta name="description" content="한국 문화와 라이프스타일 매거진"/>
     <meta property="og:title" content="frice" />
     <meta property="og:image" content="https://frice.kr/og.jpg" />
-    <h1>정상석 클리커</h1><h2>일상 속 K-라이프스타일</h2>`;
-  it("pulls title, description, og fields, and headings", () => {
+    <h1>정상석 클리커</h1><h2>일상 속 K-라이프스타일</h2>
+    <p>브랜드가 실제로 쓰는 문장을 가져옵니다.</p>
+    <button>오늘의 루틴 보기</button>`;
+  it("pulls title, description, og fields, headings, and source copy", () => {
     const m = parseHtmlMeta(html);
     expect(m.title).toContain("frice");
     expect(m.description).toContain("매거진");
     expect(m.ogImageUrl).toBe("https://frice.kr/og.jpg");
     expect(m.headings).toContain("정상석 클리커");
+    expect(m.copySnippets).toContain("브랜드가 실제로 쓰는 문장을 가져옵니다.");
+    expect(m.copySnippets).toContain("오늘의 루틴 보기");
+  });
+});
+
+describe("extractWebsiteImageAssets", () => {
+  it("keeps OG, image alt text, icons, and background images", () => {
+    const html = `
+      <meta property="og:image" content="/og.png">
+      <link rel="icon" href="/favicon.png">
+      <img src="/character.webp" alt="포곤 캐릭터">
+      <style>.hero{background-image:url('/hero-bg.jpg')}</style>`;
+    const assets = extractWebsiteImageAssets(html, "https://pogon.test/", "/og.png");
+    expect(assets).toContainEqual({ url: "https://pogon.test/og.png", source: "og" });
+    expect(assets).toContainEqual({ url: "https://pogon.test/character.webp", source: "img", alt: "포곤 캐릭터" });
+    expect(assets).toContainEqual({ url: "https://pogon.test/favicon.png", source: "icon" });
+    expect(assets).toContainEqual({ url: "https://pogon.test/hero-bg.jpg", source: "background" });
   });
 });
 
@@ -36,6 +56,14 @@ describe("extractBrandFonts", () => {
     expect(fonts).toContain("Libre Franklin");
     expect(fonts).not.toContain("Helvetica Neue");
     expect(fonts).not.toContain("Menlo");
+  });
+
+  it("drops emoji and generic display fonts", () => {
+    const css = `
+      .title { font-family: "Apple Color Emoji", "Pretendard", "Arial Black", sans-serif; }
+      body { font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif; }`;
+    const fonts = extractBrandFonts(css);
+    expect(fonts).toEqual(["Pretendard"]);
   });
 });
 

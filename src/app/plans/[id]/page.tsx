@@ -87,7 +87,7 @@ export default function PlanDetailPage({ params }: PageProps) {
         setLocalItems(updated.items);
         setDirty(false);
       } else {
-        setError("Topic generation failed. Claude CLI may be unavailable.");
+        setError("Topic generation failed. AI agent provider may be unavailable.");
       }
     } catch {
       setError("Network error during generation.");

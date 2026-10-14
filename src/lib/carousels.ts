@@ -1,6 +1,6 @@
 import { readDataSafe, writeData } from "./data";
 import { generateId, now } from "./utils";
-import type { Carousel, CarouselsData, Slide, AspectRatio, ReferenceImage } from "@/types/carousel";
+import type { Carousel, CarouselsData, Slide, AspectRatio, ReferenceImage, CharacterSheet } from "@/types/carousel";
 import { MAX_SLIDES, MAX_VERSIONS } from "@/types/carousel";
 
 const FILE = "carousels.json";
@@ -105,7 +105,7 @@ export async function addSlide(
   carouselId: string,
   html: string,
   notes = "",
-  structured?: Partial<Pick<Slide, "role" | "headline" | "body" | "items" | "media" | "tone">>
+  structured?: Partial<Pick<Slide, "role" | "headline" | "body" | "items" | "media" | "tone" | "style">>
 ): Promise<Slide | null> {
   const data = await load();
   const carousel = data.carousels.find((c) => c.id === carouselId);
@@ -124,6 +124,7 @@ export async function addSlide(
     items: structured?.items ?? [],
     media: structured?.media ?? null,
     tone: structured?.tone,
+    style: structured?.style,
   };
   carousel.slides.push(slide);
   carousel.updatedAt = now();
@@ -134,7 +135,7 @@ export async function addSlide(
 export async function updateSlide(
   carouselId: string,
   slideId: string,
-  updates: Partial<Pick<Slide, "html" | "notes" | "role" | "headline" | "body" | "items" | "media" | "tone">>
+  updates: Partial<Pick<Slide, "html" | "notes" | "role" | "headline" | "body" | "items" | "media" | "tone" | "style">>
 ): Promise<Slide | null> {
   const data = await load();
   const carousel = data.carousels.find((c) => c.id === carouselId);
@@ -232,6 +233,19 @@ export async function addReferenceImage(
   return image;
 }
 
+export async function setCharacterSheet(
+  carouselId: string,
+  characterSheet: CharacterSheet
+): Promise<Carousel | null> {
+  const data = await load();
+  const carousel = data.carousels.find((c) => c.id === carouselId);
+  if (!carousel) return null;
+  carousel.characterSheet = characterSheet;
+  carousel.updatedAt = now();
+  await save(data);
+  return carousel;
+}
+
 export async function removeReferenceImage(
   carouselId: string,
   imageId: string
@@ -247,4 +261,20 @@ export async function removeReferenceImage(
   carousel.updatedAt = now();
   await save(data);
   return true;
+}
+
+export async function updateReferenceImage(
+  carouselId: string,
+  imageId: string,
+  updates: Partial<ReferenceImage>
+): Promise<ReferenceImage | null> {
+  const data = await load();
+  const carousel = data.carousels.find((c) => c.id === carouselId);
+  if (!carousel || !carousel.referenceImages) return null;
+  const image = carousel.referenceImages.find((img) => img.id === imageId);
+  if (!image) return null;
+  Object.assign(image, updates);
+  carousel.updatedAt = now();
+  await save(data);
+  return image;
 }

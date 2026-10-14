@@ -2,9 +2,18 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import path from "path";
 
 const FONT_CACHE_DIR = path.resolve(process.cwd(), "data", ".font-cache");
+const FONT_FETCH_TIMEOUT_MS = 5000;
 
 // In-memory cache (survives across requests, lost on restart)
 const memoryCache = new Map<string, string>();
+const missingCache = new Set<string>();
+const LOCAL_FONT_FAMILIES = new Set([
+  "-apple-system",
+  "arial",
+  "blinkmacsystemfont",
+  "pretendard",
+  "system-ui",
+]);
 
 /**
  * Fetch Google Fonts CSS with inlined base64 woff2 data URIs.
@@ -18,6 +27,7 @@ export async function getInlinedFontCSS(
   const parts: string[] = [];
 
   for (const family of families) {
+    if (shouldSkipFont(family)) continue;
     const cached = await getCachedFont(family);
     if (cached) {
       parts.push(cached);
@@ -29,13 +39,25 @@ export async function getInlinedFontCSS(
       if (css) {
         await cacheFont(family, css);
         parts.push(css);
+      } else {
+        missingCache.add(normalizeFontName(family));
       }
     } catch {
+      missingCache.add(normalizeFontName(family));
       // Font not available — skip silently, system font fallback will be used
     }
   }
 
   return parts.join("\n");
+}
+
+function shouldSkipFont(family: string): boolean {
+  const normalized = normalizeFontName(family);
+  return LOCAL_FONT_FAMILIES.has(normalized) || missingCache.has(normalized);
+}
+
+function normalizeFontName(family: string): string {
+  return family.trim().replace(/^['"]|['"]$/g, "").toLowerCase();
 }
 
 async function getCachedFont(family: string): Promise<string | null> {
@@ -75,7 +97,7 @@ async function cacheFont(family: string, css: string): Promise<void> {
 async function fetchAndInlineFont(family: string): Promise<string | null> {
   // Fetch CSS from Google Fonts (with woff2-capable user agent)
   const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@300;400;500;600;700;800&display=block`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       // User agent that tells Google to serve woff2 format
       "User-Agent":
@@ -93,7 +115,7 @@ async function fetchAndInlineFont(family: string): Promise<string | null> {
   for (const match of matches) {
     const fontUrl = match[1];
     try {
-      const fontResponse = await fetch(fontUrl);
+      const fontResponse = await fetchWithTimeout(fontUrl);
       if (!fontResponse.ok) continue;
       const buffer = await fontResponse.arrayBuffer();
       const base64 = Buffer.from(buffer).toString("base64");
@@ -110,4 +132,17 @@ async function fetchAndInlineFont(family: string): Promise<string | null> {
   css = css.replace(/font-display:\s*swap/g, "font-display: block");
 
   return css;
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init?: RequestInit
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FONT_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }

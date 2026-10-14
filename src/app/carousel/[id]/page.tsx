@@ -28,7 +28,7 @@ export default function CarouselEditorPage({ params }: PageProps) {
   const [carousel, setCarousel] = useState<Carousel | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [claudeAvailable, setClaudeAvailable] = useState(true);
+  const [agentAvailable, setAgentAvailable] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSafeZones, setShowSafeZones] = useState(false);
@@ -87,7 +87,7 @@ export default function CarouselEditorPage({ params }: PageProps) {
       try {
         const res = await fetch("/api/chat/check");
         const data: { available?: boolean } = await res.json();
-        if (data.available === false) setClaudeAvailable(false);
+        if (data.available === false) setAgentAvailable(false);
       } catch {
         // assume available
       }
@@ -261,10 +261,10 @@ export default function CarouselEditorPage({ params }: PageProps) {
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Chat panel */}
         {chatOpen && (
-          <div className="oc-fade w-80 border-r border-border shrink-0 flex flex-col bg-surface">
+          <div className="oc-fade w-[min(42vw,520px)] min-w-[400px] border-r border-border shrink-0 flex flex-col bg-surface">
             <ChatPanel
               carouselId={id}
-              claudeAvailable={claudeAvailable}
+              agentAvailable={agentAvailable}
               referenceImages={carousel.referenceImages || []}
               onStreamStart={handleStreamStart}
               onStreamEnd={handleStreamEnd}
@@ -351,7 +351,9 @@ export default function CarouselEditorPage({ params }: PageProps) {
             </button>
             <ExportButton
               carouselId={carousel.id}
+              carouselName={carousel.name}
               slideCount={carousel.slides.length}
+              quality={carousel.quality}
             />
           </div>
 

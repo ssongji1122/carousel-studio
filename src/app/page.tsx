@@ -169,7 +169,7 @@ export default function DashboardPage() {
         <div className="max-w-5xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold">studio.soluta carousels</h1>
+              <h1 className="text-2xl font-bold">Carousel Studio</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 인스타·Threads 캐로셀을 브랜드 톤으로 한 번에
               </p>

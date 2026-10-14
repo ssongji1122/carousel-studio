@@ -4,10 +4,8 @@ import type { PlansData } from "@/types/plan";
 vi.mock("@/lib/data", () => {
   let store: PlansData = { plans: [] };
   return {
-    readDataSafe: vi.fn(async (_f: string, _fallback: PlansData) => store),
-    writeData: vi.fn(async (_f: string, data: PlansData) => {
-      store = data;
-    }),
+    readDataSafe: vi.fn(async (_f: string, fallback: PlansData) => store ?? fallback),
+    writeData: vi.fn(async (_f: string, data: PlansData) => { store = data; }),
     ensureDataDir: vi.fn(async () => {}),
   };
 });

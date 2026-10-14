@@ -3,7 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
+import { ChatEmptyState } from "./ChatEmptyState";
 import { ReferenceImages } from "./ReferenceImages";
+import { streamChatResponse } from "./chat-stream";
 import { AlertCircle, Plug } from "lucide-react";
 import type { ReferenceImage } from "@/types/carousel";
 
@@ -16,7 +18,7 @@ interface Message {
 interface ChatPanelProps {
   carouselId: string;
   referenceImages?: ReferenceImage[];
-  claudeAvailable: boolean;
+  agentAvailable: boolean;
   onStreamStart?: () => void;
   onStreamEnd?: () => void;
   chatInputRef?: React.RefObject<HTMLTextAreaElement | null>;
@@ -24,7 +26,7 @@ interface ChatPanelProps {
 
 export function ChatPanel({
   carouselId,
-  claudeAvailable,
+  agentAvailable,
   referenceImages = [],
   onStreamStart,
   onStreamEnd,
@@ -104,106 +106,21 @@ export function ChatPanel({
       abortRef.current = new AbortController();
 
       try {
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message,
-            sessionId,
-            carouselId,
-          }),
+        await streamChatResponse({
+          message,
+          sessionId,
+          carouselId,
           signal: abortRef.current.signal,
+          onText: (text) => {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, content: text } : m))
+            );
+          },
+          onSessionId: (nextSessionId) => {
+            setSessionId(nextSessionId);
+            localStorage.setItem(`chat-session-${carouselId}`, nextSessionId);
+          },
         });
-
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(
-            (err as { error?: string }).error || "Failed to connect to AI"
-          );
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error("No response stream");
-
-        const decoder = new TextDecoder();
-        let accumulated = "";
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.type === "token" && typeof data.text === "string") {
-                  accumulated += data.text;
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantId
-                        ? { ...m, content: accumulated }
-                        : m
-                    )
-                  );
-                } else if (data.type === "result" && typeof data.text === "string") {
-                  accumulated = data.text; // result is the final complete text
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantId
-                        ? { ...m, content: accumulated }
-                        : m
-                    )
-                  );
-                }
-              } catch {
-                // skip unparseable
-              }
-            } else if (line.startsWith("event: done")) {
-              // Next line has the done data
-            } else if (
-              line.startsWith("data: ") &&
-              line.includes("sessionId")
-            ) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.sessionId) {
-                  setSessionId(data.sessionId);
-                  localStorage.setItem(
-                    `chat-session-${carouselId}`,
-                    data.sessionId
-                  );
-                }
-              } catch {
-                // skip
-              }
-            }
-          }
-        }
-
-        // Parse any remaining buffer for the done event
-        if (buffer.trim()) {
-          for (const line of buffer.split("\n")) {
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.sessionId) {
-                  setSessionId(data.sessionId);
-                  localStorage.setItem(
-                    `chat-session-${carouselId}`,
-                    data.sessionId
-                  );
-                }
-              } catch {
-                // skip
-              }
-            }
-          }
-        }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
         const message = err instanceof Error ? err.message : "An unexpected error occurred";
@@ -228,20 +145,20 @@ export function ChatPanel({
     [isStreaming, sessionId, carouselId, onStreamStart, onStreamEnd, persistMessages]
   );
 
-  if (!claudeAvailable) {
+  if (!agentAvailable) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
         <Plug className="h-10 w-10 text-muted-foreground mb-3" />
-        <h3 className="font-semibold text-sm mb-1">Connect Claude CLI</h3>
+        <h3 className="font-semibold text-sm mb-1">Connect AI Agent</h3>
         <p className="text-xs text-muted-foreground max-w-[200px]">
-          Install Claude CLI to enable AI-powered carousel creation.{" "}
+          Claude, Codex, or Cursor Agent CLI is required for carousel creation.{" "}
           <a
             href="https://docs.anthropic.com/en/docs/claude-code"
             target="_blank"
             rel="noopener noreferrer"
             className="text-accent underline"
           >
-            Install guide
+            Claude guide
           </a>
         </p>
       </div>
@@ -252,10 +169,8 @@ export function ChatPanel({
     <div className="h-full flex flex-col">
       <div className="px-4 py-3 border-b border-border flex items-start justify-between">
         <div>
-          <h2 className="text-sm font-semibold">문안 도우미</h2>
-          <p className="text-xs text-muted-foreground">
-            업종·타깃·주제를 알려주면 브랜드 톤으로 캐로셀을 만듭니다
-          </p>
+          <h2 className="text-sm font-semibold">캐러셀 요청</h2>
+          <p className="text-xs text-muted-foreground">한 줄만 적어도 초안을 만듭니다</p>
         </div>
         {messages.length > 0 && (
           <button
@@ -275,18 +190,7 @@ export function ChatPanel({
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {messages.length === 0 && (
-          <div className="p-6 text-muted-foreground">
-            <p className="text-sm font-medium text-foreground mb-3">이렇게 시작하세요</p>
-            <ol className="text-xs space-y-2 list-none">
-              <li><span className="text-accent font-semibold">1.</span> 업종·타깃·주제를 한 줄로 입력 (예: 1인 디자인 스튜디오, 소상공인 대상, 좋은 브리프 쓰는 법)</li>
-              <li><span className="text-accent font-semibold">2.</span> 보내면 브랜드 보이스로 5~8장 초안이 생성됩니다</li>
-              <li><span className="text-accent font-semibold">3.</span> 슬라이드 글자를 직접 눌러 수정</li>
-              <li><span className="text-accent font-semibold">4.</span> 상단 Export PNG로 내보내기</li>
-            </ol>
-            <p className="text-[11px] mt-4 pt-3 border-t border-border">
-              여러 장을 한 번에 기획하려면 좌상단 뒤로가기 → 시리즈 플래너를 이용하세요.
-            </p>
-          </div>
+          <ChatEmptyState disabled={isStreaming} onPick={handleSend} />
         )}
         {messages.map((msg) => (
           <ChatMessage

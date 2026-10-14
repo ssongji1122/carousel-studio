@@ -22,8 +22,8 @@ describe("fanoutPlan", () => {
     const plan: Plan = {
       id: "p1",
       projectId: "studio-soluta",
-      channel: "threads",
       brief: { scope: "s", target: "t" },
+      channel: "threads",
       count: 2,
       pillars: [],
       items: [
@@ -51,8 +51,8 @@ describe("fanoutPlan", () => {
     const plan: Plan = {
       id: "p2",
       projectId: "studio-soluta",
-      channel: "instagram",
       brief: { scope: "s", target: "t" },
+      channel: "instagram",
       count: 2,
       pillars: [],
       items: [

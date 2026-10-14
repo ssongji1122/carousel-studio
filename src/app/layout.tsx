@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "studio.soluta carousels",
+  title: "Carousel Studio",
   description:
-    "studio.soluta 브랜드 톤으로 인스타·Threads 캐로셀을 기획하고 초안까지 만드는 도구.",
+    "브랜드별 인스타·Threads 캐로셀을 기획하고 초안까지 만드는 도구.",
 };
 
 export default function RootLayout({

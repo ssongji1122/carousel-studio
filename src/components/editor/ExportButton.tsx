@@ -1,23 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Loader2, Check } from "lucide-react";
+import { Download, Loader2, Check, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { CarouselQualityReport } from "@/types/carousel";
 
 interface ExportButtonProps {
   carouselId: string;
+  carouselName: string;
   slideCount: number;
+  quality?: CarouselQualityReport;
 }
 
-export function ExportButton({ carouselId, slideCount }: ExportButtonProps) {
+export function ExportButton({ carouselId, carouselName, slideCount, quality }: ExportButtonProps) {
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+  const blockingIssue = quality?.issues.find((issue) => issue.severity === "error");
+  const downloadName = buildDownloadName(carouselName, carouselId);
 
   const handleExport = async () => {
-    if (exporting || slideCount === 0) return;
+    if (exporting || slideCount === 0 || blockingIssue) return;
     setExporting(true);
     setDone(false);
+    setError("");
     setProgress({ current: 0, total: slideCount });
 
     try {
@@ -26,7 +33,8 @@ export function ExportButton({ carouselId, slideCount }: ExportButtonProps) {
       });
 
       if (!response.ok) {
-        throw new Error("Export failed");
+        const payload = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Export failed");
       }
 
       // Check if it's SSE (progress) or direct blob (ZIP)
@@ -58,7 +66,7 @@ export function ExportButton({ carouselId, slideCount }: ExportButtonProps) {
                   // Trigger download
                   const a = document.createElement("a");
                   a.href = data.downloadUrl;
-                  a.download = `carousel-${carouselId}.zip`;
+                  a.download = downloadName;
                   a.click();
                   setDone(true);
                 }
@@ -74,31 +82,41 @@ export function ExportButton({ carouselId, slideCount }: ExportButtonProps) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `carousel-${carouselId}.zip`;
+        a.download = downloadName;
         a.click();
         URL.revokeObjectURL(url);
         setDone(true);
       }
     } catch (error) {
       console.error("Export error:", error);
+      setError(error instanceof Error ? error.message : "Export failed");
     } finally {
       setExporting(false);
       setTimeout(() => setDone(false), 3000);
     }
   };
 
+  const disabled = exporting || slideCount === 0 || Boolean(blockingIssue);
+  const title = blockingIssue?.message ?? (error || "Export PNG");
+
   return (
     <Button
       onClick={handleExport}
-      disabled={exporting || slideCount === 0}
+      disabled={disabled}
       variant="accent"
       size="sm"
+      title={title}
     >
       <span
         key={exporting ? "exporting" : done ? "done" : "idle"}
         className="oc-enter-pop inline-flex items-center gap-2"
       >
-        {exporting ? (
+        {blockingIssue ? (
+          <>
+            <AlertTriangle className="h-4 w-4" />
+            <span>검수 필요</span>
+          </>
+        ) : exporting ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>
@@ -110,6 +128,11 @@ export function ExportButton({ carouselId, slideCount }: ExportButtonProps) {
             <Check className="h-4 w-4" />
             <span>Downloaded!</span>
           </>
+        ) : error ? (
+          <>
+            <AlertTriangle className="h-4 w-4" />
+            <span>Export failed</span>
+          </>
         ) : (
           <>
             <Download className="h-4 w-4" />
@@ -119,4 +142,9 @@ export function ExportButton({ carouselId, slideCount }: ExportButtonProps) {
       </span>
     </Button>
   );
+}
+
+function buildDownloadName(name: string, id: string): string {
+  const safeName = name.trim().replace(/[\\/:*?"<>|]+/g, "-");
+  return `carousel-${safeName || id}.zip`;
 }

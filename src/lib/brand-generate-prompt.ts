@@ -17,7 +17,7 @@ const DEFAULT_API_BASE_URL = "http://localhost:3000";
 export function buildBrandGeneratePrompt(
   brief: BrandBrief,
   genDir: string,
-  apiBaseUrl = DEFAULT_API_BASE_URL
+  baseUrl = DEFAULT_API_BASE_URL
 ): string {
   return `당신은 브랜드 디자인 도우미입니다. 아래 답변만으로 브랜드를 설계하세요(기존 문서 없음).
 
@@ -39,15 +39,28 @@ export function buildBrandGeneratePrompt(
 - 폰트: heading·body·mono. 세리프 무드면 heading에 세리프(한글은 "Nanum Myeongjo" 폴백 체인),
   산세/모던이면 Pretendard. 한국어 본문이면 body는 "Pretendard".
 - 보이스: ending(어미, 예 "합니다체"), keywords(자주 쓸 단어 3~6개), banned(피할 단어 — 입력의
-  "피하고 싶은 느낌" 반영 + 과장/AI buzzword).
+  "피하고 싶은 느낌" 반영 + 과장/AI buzzword), language(브랜드 문장 습관).
+  language는 preferredPhrases, avoidPhrases, headlinePatterns, writingRules, sampleLines를 모두 채웁니다.
+  sampleLines는 캐러셀 헤드라인으로 바로 써도 어색하지 않은 브랜드다운 문장이어야 합니다.
 
 ### 2. 적용 — brand API에 PUT (Bash curl, 한 번만)
 \`\`\`bash
-curl -s -X PUT ${apiBaseUrl}/api/brand -H "Content-Type: application/json" -d '{
+curl -s -X PUT ${baseUrl}/api/brand -H "Content-Type: application/json" -d '{
   "name":"...","colors":{"primary":"#...","secondary":"#...","accent":"#...","background":"#...","surface":"#...","line":"#...","dark":"#...","accentDark":"#...","eucalyptus":"#...","dusty":"#...","soot":"#..."},
   "fonts":{"heading":"...","body":"...","mono":"..."},
   "styleKeywords":["..."],
-  "voice":{"ending":"...","keywords":["..."],"banned":["..."]}
+  "voice":{
+    "ending":"...",
+    "keywords":["..."],
+    "banned":["..."],
+    "language":{
+      "preferredPhrases":["..."],
+      "avoidPhrases":["..."],
+      "headlinePatterns":["..."],
+      "writingRules":["..."],
+      "sampleLines":["..."]
+    }
+  }
 }'
 \`\`\`
 

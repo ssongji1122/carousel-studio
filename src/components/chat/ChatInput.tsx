@@ -13,11 +13,13 @@ interface ChatInputProps {
 }
 
 const SUGGESTIONS = [
-  "1인 디자인 스튜디오인데, 좋은 브리프 쓰는 법으로 6장 만들어줘",
-  "타깃은 소상공인. 무료 도구로 브랜드 컬러 정하는 법",
-  "3번 슬라이드를 더 짧게 다듬어줘",
-  "마지막에 신청 유도 CTA 슬라이드 추가해줘",
+  "좋은 브리프 쓰는 법, 6장",
+  "소상공인에게 브랜드 컬러 설명",
+  "3번 슬라이드 더 짧게",
+  "마지막에 신청 유도 추가",
 ];
+
+const MAX_TEXTAREA_HEIGHT = 220;
 
 export function ChatInput({ onSend, isStreaming, disabled, textareaRef: externalRef, onStop }: ChatInputProps) {
   const [value, setValue] = useState("");
@@ -45,26 +47,26 @@ export function ChatInput({ onSend, isStreaming, disabled, textareaRef: external
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = "auto";
-      textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
     }
   };
 
   return (
-    <div className="border-t border-border p-3">
+    <div className="border-t border-border p-4">
       {value.length === 0 && !isStreaming && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
+        <div className="flex flex-wrap gap-2 mb-3">
           {SUGGESTIONS.slice(0, 3).map((suggestion) => (
             <button
               key={suggestion}
               onClick={() => setValue(suggestion)}
-              className="text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="max-w-full text-left text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
               {suggestion}
             </button>
           ))}
         </div>
       )}
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-3">
         <textarea
           ref={textareaRef}
           value={value}
@@ -74,11 +76,11 @@ export function ChatInput({ onSend, isStreaming, disabled, textareaRef: external
           placeholder={
             isStreaming
               ? "생성 중..."
-              : "업종 · 타깃 · 주제를 한 줄로. 예: 1인 디자인 스튜디오, 소상공인 대상, 좋은 브리프 쓰는 법"
+              : "무엇을 만들까요? 업종, 대상, 주제를 한 줄로 적어주세요."
           }
           disabled={isStreaming || disabled}
-          rows={1}
-          className="flex-1 resize-none bg-muted rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+          rows={3}
+          className="min-h-[104px] flex-1 resize-none bg-muted rounded-xl px-4 py-3 text-sm leading-6 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
           aria-label="Chat message input"
         />
         {isStreaming ? (

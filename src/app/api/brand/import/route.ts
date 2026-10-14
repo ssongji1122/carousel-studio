@@ -1,15 +1,18 @@
+import { getRequestOrigin } from "@/lib/request-origin";
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
-import crossSpawn from "cross-spawn";
-import { getClaudePath, isClaudeAvailable } from "@/lib/claude-path";
+import {
+  hasAvailableAgentProvider,
+  isAgentChainError,
+  runAgentWithFallback,
+} from "@/lib/agent-providers";
 import { resolveActiveBrand } from "@/lib/resolve-brand";
-import { updateBrand } from "@/lib/brand";
-import { getActiveProjectId } from "@/lib/workspace";
 import { buildBrandImportPrompt } from "@/lib/brand-import-prompt";
 import { fetchInstagramProfile, extractPalette, profileImageUrls, downloadFeedImages } from "@/lib/instagram-brand";
 import { fetchWebsiteSignals, resolveBrandWebsite } from "@/lib/website-brand";
 import { buildBrandDoc, type BrandSources } from "@/lib/brand-doc";
-import { getRequestOrigin } from "@/lib/request-origin";
+import { buildBrandAnalysis, applyBrandAnalysis } from "@/lib/brand-analysis";
+import { getActiveProjectId } from "@/lib/workspace";
+import { updateBrand } from "@/lib/brand";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,8 +22,11 @@ export const maxDuration = 300;
 // Claude reads the brand documents, extracts a brand profile, and PUTs it to
 // /api/brand. Returns the refreshed brand.
 export async function POST(request: NextRequest) {
-  if (!isClaudeAvailable()) {
-    return NextResponse.json({ error: "Claude CLI not found" }, { status: 503 });
+  if (!hasAvailableAgentProvider()) {
+    return NextResponse.json(
+      { error: "No AI agent provider found. Install Claude, Codex, or Cursor Agent CLI." },
+      { status: 503 }
+    );
   }
 
   let body: unknown;
@@ -40,7 +46,7 @@ export async function POST(request: NextRequest) {
   // which one is the accent/main — Claude maps by dominance, but a brand's
   // accent is often a low-frequency color a human spots instantly.
   let extractedPalette: string[] = [];
-  // Feed images saved to /public/uploads so they can be placed into slides.
+  let collectedSources: BrandSources | null = null;
   let imageAssets: string[] = [];
   if (instagram || website) {
     try {
@@ -54,10 +60,9 @@ export async function POST(request: NextRequest) {
           profile.profilePicUrl ?? undefined
         );
         sources.ig = { profile, palette };
-        // Save the feed images so the user's carousels can use real photos.
         imageAssets = await downloadFeedImages(
           instagram,
-          profile.posts.map((p) => p.imageUrl).filter((u): u is string => !!u)
+          profile.posts.map((post) => post.imageUrl).filter((url): url is string => !!url)
         );
         // No website given? Discover the official site from the profile's
         // bio links (unwrapping IG redirects and litt.ly aggregators).
@@ -81,6 +86,7 @@ export async function POST(request: NextRequest) {
         ])
       );
       docs = buildBrandDoc(sources);
+      collectedSources = sources;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "소스에서 가져오지 못했습니다.";
       return NextResponse.json({ error: msg }, { status: 502 });
@@ -95,42 +101,37 @@ export async function POST(request: NextRequest) {
   }
 
   const prompt = buildBrandImportPrompt(docs, getRequestOrigin(request));
-  const claudePath = getClaudePath();
-  const isWindowsShim =
-    process.platform === "win32" && /\.(cmd|bat)$/i.test(claudePath);
-  const spawner = isWindowsShim ? crossSpawn : spawn;
 
   try {
-    await new Promise<void>((resolve, reject) => {
-      const child = spawner(
-        claudePath,
-        [
-          "-p",
-          "브랜드 문서에서 색·폰트·보이스를 추출해 brand API에 PUT해줘.",
-          "--append-system-prompt",
-          prompt,
-          "--allowedTools",
-          "Bash",
-          "--max-budget-usd",
-          "1.00",
-          "--name",
-          "carrusel-brand-import",
-        ],
-        { cwd: process.cwd(), stdio: "ignore" }
-      );
-      child.on("error", reject);
-      child.on("close", (code) =>
-        code === 0 ? resolve() : reject(new Error("Claude CLI exited " + code))
-      );
+    await runAgentWithFallback({
+      name: "carrusel-brand-import",
+      userPrompt: "브랜드 문서에서 색·폰트·보이스를 추출해 brand API에 PUT해줘.",
+      systemPrompt: prompt,
+      cwd: process.cwd(),
+      claudeAllowedTools: ["Bash"],
     });
-  } catch {
+  } catch (error) {
+    if (isAgentChainError(error)) {
+      return NextResponse.json(
+        { error: error.message, attempts: error.attempts },
+        { status: error.status }
+      );
+    }
     return NextResponse.json({ error: "Brand import failed" }, { status: 502 });
   }
 
-  // Attach the saved feed images to the brand so carousels can use them as media.
   if (imageAssets.length) {
     await updateBrand(await getActiveProjectId(), { imageAssets });
   }
   const updated = await resolveActiveBrand();
+  if (collectedSources) {
+    const analysis = buildBrandAnalysis(collectedSources, updated);
+    if (analysis) {
+      const projectId = await getActiveProjectId();
+      const analyzed = await updateBrand(projectId, applyBrandAnalysis(updated, analysis));
+      return NextResponse.json({ ...analyzed, extractedPalette });
+    }
+  }
+
   return NextResponse.json({ ...updated, extractedPalette });
 }

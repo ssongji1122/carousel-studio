@@ -7,6 +7,12 @@ describe("wrapSlideHtml Pretendard", () => {
     const out = wrapSlideHtml(body, "4:5");
     expect(out).toContain("cdn.jsdelivr.net/gh/orioncactus/pretendard");
   });
+
+  it("does not inject remote Pretendard CSS in export mode", () => {
+    const body = `<div style="font-family:'Pretendard Variable',sans-serif">a</div>`;
+    const out = wrapSlideHtml(body, "4:5", { inlineFontCss: "" });
+    expect(out).not.toContain("cdn.jsdelivr.net/gh/orioncactus/pretendard");
+  });
 });
 
 describe("extractFontFamilies fallback fonts", () => {

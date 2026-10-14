@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import path from "path";
-import { addReferenceImage, removeReferenceImage, getCarousel } from "@/lib/carousels";
+import { addReferenceImage, removeReferenceImage, getCarousel, setCharacterSheet } from "@/lib/carousels";
 import { generateId, now } from "@/lib/utils";
 import { extractPaletteFromFile } from "@/lib/instagram-brand";
+import { analyzeReferenceImageForCharacter, buildCharacterSheet } from "@/lib/character-sheet";
+import { getProjectContext, requireConfiguredProjectContext } from "@/lib/project-context";
+import type { ReferenceImage } from "@/types/carousel";
 
 export const runtime = "nodejs";
 
@@ -37,19 +40,24 @@ export async function POST(
     // can use them as this carousel's accent/palette (brand defaults untouched).
     const palette = await extractPaletteFromFile(absPath);
 
-    const ref = {
+    const ref: ReferenceImage = {
       id: generateId(),
       url,
       absPath,
       name: name || "Reference image",
       addedAt: now(),
       palette,
+      characterSignals: [],
+      visionAnalysisStatus: "pending",
     };
+    ref.characterSignals = analyzeReferenceImageForCharacter(ref);
 
     const result = await addReferenceImage(id, ref);
     if (!result) {
       return NextResponse.json({ error: "Carousel not found" }, { status: 404 });
     }
+
+    await refreshCharacterSheet(id).catch(() => {});
 
     return NextResponse.json(result, { status: 201 });
   } catch {
@@ -74,8 +82,20 @@ export async function DELETE(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    await refreshCharacterSheet(id).catch(() => {});
+
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
+}
+
+async function refreshCharacterSheet(carouselId: string): Promise<void> {
+  const carousel = await getCarousel(carouselId);
+  if (!carousel) return;
+  const context = requireConfiguredProjectContext(
+    await getProjectContext(carousel.projectId)
+  );
+  const sheet = buildCharacterSheet(context.brand, carousel.referenceImages ?? []);
+  await setCharacterSheet(carouselId, sheet);
 }

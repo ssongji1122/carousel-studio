@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCarousel, updateCarousel, deleteCarousel } from "@/lib/carousels";
+import { validateCarouselQuality } from "@/lib/carousel-quality";
+import { getProjectContext } from "@/lib/project-context";
 
 export async function GET(
   _request: Request,
@@ -10,7 +12,15 @@ export async function GET(
   if (!carousel) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json(carousel);
+  const context = await getProjectContext(carousel.projectId);
+  return NextResponse.json({
+    ...carousel,
+    quality: validateCarouselQuality(
+      carousel,
+      context.brand,
+      context.creativeGuides
+    ),
+  });
 }
 
 export async function PUT(

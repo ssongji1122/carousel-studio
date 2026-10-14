@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ImageUp, Maximize, Plus, Type } from "lucide-react";
-import { extractFontFamilies } from "@/lib/slide-html";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ensureSlideFonts } from "./slide-font-loader";
+import { SlideEditControls } from "./SlideEditControls";
 import { DIMENSIONS } from "@/types/carousel";
 import type { Slide, AspectRatio } from "@/types/carousel";
+import type { SelectedSlideSegment } from "./SlideEditControls";
 
 interface EditableSlideViewProps {
   carouselId: string;
@@ -14,41 +15,6 @@ interface EditableSlideViewProps {
   style?: React.CSSProperties;
 }
 
-// Ensure the Google Fonts (+ Pretendard) used by a slide are present in the
-// document head, so the in-DOM editable view matches the iframe/export render.
-function ensureFonts(html: string) {
-  if (typeof document === "undefined") return;
-  const families = extractFontFamilies(html);
-  const links: string[] = [];
-  if (/pretendard/i.test(html)) {
-    links.push(
-      "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css"
-    );
-  }
-  const google = families.filter((f) => !/pretendard/i.test(f));
-  if (google.length > 0) {
-    const params = google
-      .map((f) => `family=${encodeURIComponent(f)}:wght@400;500;600;700;800`)
-      .join("&");
-    links.push(`https://fonts.googleapis.com/css2?${params}&display=swap`);
-  }
-  for (const href of links) {
-    if (document.querySelector(`link[data-oc-font="${href}"]`)) continue;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = href;
-    link.dataset.ocFont = href;
-    document.head.appendChild(link);
-  }
-}
-
-const TONES = [
-  { v: "paper", label: "종이" },
-  { v: "soft", label: "소프트" },
-  { v: "dark", label: "다크" },
-  { v: "wine", label: "와인" },
-] as const;
-
 export function EditableSlideView({
   carouselId,
   slide,
@@ -57,20 +23,32 @@ export function EditableSlideView({
   style,
 }: EditableSlideViewProps) {
   const outerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const dragRef = useRef<{
+    startClientX: number;
+    startClientY: number;
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+    rect: DOMRect;
+    moved: boolean;
+  } | null>(null);
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
-  const [mediaCenter, setMediaCenter] = useState<{ left: number; top: number } | null>(null);
+  const [selectedSegment, setSelectedSegment] = useState<SelectedSlideSegment>(null);
   const [saving, setSaving] = useState(false);
   const { width: slideW, height: slideH } = DIMENSIONS[aspectRatio];
 
-  const items = slide.items ?? [];
+  const items = useMemo(() => slide.items ?? [], [slide.items]);
   const isList = items.length > 0;
   const hasMedia = !!slide.media;
-  // Lists don't render a body; offer "add body" only where it would show.
   const canAddBody = !isList && !slide.body;
+  const scale = dims ? Math.min(dims.w / slideW, dims.h / slideH) : 0;
+  const scaledW = Math.floor(slideW * scale);
+  const scaledH = Math.floor(slideH * scale);
 
-  // PUT a structured patch; the API re-renders the slide HTML and returns it.
   const saveField = useCallback(
     async (patch: Record<string, unknown>) => {
       setSaving(true);
@@ -88,23 +66,33 @@ export function EditableSlideView({
     [carouselId, slide.id, onSaved]
   );
 
-  // Inject slide HTML imperatively (keyed by html), wire inline editing, and
-  // inject a per-item delete button into each list row.
   useEffect(() => {
     const stage = stageRef.current;
-    if (!stage) return;
-    ensureFonts(slide.html);
+    if (!stage || scale <= 0) return;
+    ensureSlideFonts(slide.html);
     stage.innerHTML = slide.html;
     const cleanups: Array<() => void> = [];
 
-    // contentEditable text fields
     stage
       .querySelectorAll<HTMLElement>('[data-edit="headline"],[data-edit="body"],[data-edit="item"]')
       .forEach((el) => {
         el.setAttribute("contenteditable", "true");
+        el.setAttribute("spellcheck", "false");
+        el.setAttribute("autocorrect", "off");
+        el.spellcheck = false;
         el.style.outline = "none";
         el.style.cursor = "text";
         const original = el.textContent ?? "";
+        const onSelect = (ev: Event) => {
+          ev.stopPropagation();
+          const kind = el.dataset.edit;
+          if (kind === "headline") setSelectedSegment({ type: "headline", label: "헤드라인" });
+          else if (kind === "body") setSelectedSegment({ type: "body", label: "본문" });
+          else if (kind === "item") {
+            const idx = Number(el.dataset.editIndex ?? "-1");
+            setSelectedSegment({ type: "item", label: `항목 ${idx + 1}`, index: idx });
+          }
+        };
         const onBlur = () => {
           const next = (el.textContent ?? "").trim();
           if (next === original.trim()) return;
@@ -120,11 +108,14 @@ export function EditableSlideView({
             }
           }
         };
+        el.addEventListener("click", onSelect);
+        el.addEventListener("focus", onSelect);
         el.addEventListener("blur", onBlur);
+        cleanups.push(() => el.removeEventListener("click", onSelect));
+        cleanups.push(() => el.removeEventListener("focus", onSelect));
         cleanups.push(() => el.removeEventListener("blur", onBlur));
       });
 
-    // per-item delete (×) injected into each row
     stage.querySelectorAll<HTMLElement>('[data-edit="item"]').forEach((el) => {
       const row = el.parentElement;
       if (!row) return;
@@ -146,21 +137,104 @@ export function EditableSlideView({
       row.appendChild(del);
     });
 
-    // locate media region center for the overlay controls
-    const mediaEl = stage.querySelector<HTMLElement>('[data-edit="media"]');
-    setMediaCenter(
-      mediaEl
-        ? { left: mediaEl.offsetLeft + mediaEl.offsetWidth / 2, top: mediaEl.offsetTop + mediaEl.offsetHeight / 2 }
-        : null
-    );
+    const mediaEl =
+      stage.querySelector<HTMLElement>('[data-edit="media"]') ||
+      stage.querySelector<HTMLImageElement>("img")?.parentElement ||
+      null;
+    if (mediaEl) {
+      mediaEl.dataset.editSegment = "media";
+      mediaEl.style.cursor = "pointer";
+      const onMediaSelect = (ev: MouseEvent) => {
+        ev.stopPropagation();
+        setSelectedSegment({ type: "media", label: "이미지" });
+      };
+      const onPointerMove = (ev: PointerEvent) => {
+        const drag = dragRef.current;
+        if (!drag) return;
+        drag.moved = true;
+        drag.currentX = clamp(drag.startX + ((ev.clientX - drag.startClientX) / drag.rect.width) * 100, 0, 100);
+        drag.currentY = clamp(drag.startY + ((ev.clientY - drag.startClientY) / drag.rect.height) * 100, 0, 100);
+        const img = mediaEl.querySelector<HTMLImageElement>("img");
+        if (img) {
+          const position = `${Math.round(drag.currentX)}% ${Math.round(drag.currentY)}%`;
+          img.style.objectPosition = position;
+          img.style.transformOrigin = position;
+        }
+      };
+      const onPointerUp = () => {
+        const drag = dragRef.current;
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        dragRef.current = null;
+        if (!drag?.moved) return;
+        saveField({
+          style: {
+            mediaObjectX: Math.round(drag.currentX),
+            mediaObjectY: Math.round(drag.currentY),
+          },
+        });
+      };
+      const onPointerDown = (ev: PointerEvent) => {
+        if (ev.button !== 0) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        setSelectedSegment({ type: "media", label: "이미지" });
+        const currentStyle = slide.style ?? {};
+        dragRef.current = {
+          startClientX: ev.clientX,
+          startClientY: ev.clientY,
+          startX: currentStyle.mediaObjectX ?? 50,
+          startY: currentStyle.mediaObjectY ?? 50,
+          currentX: currentStyle.mediaObjectX ?? 50,
+          currentY: currentStyle.mediaObjectY ?? 50,
+          rect: mediaEl.getBoundingClientRect(),
+          moved: false,
+        };
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerup", onPointerUp);
+      };
+      mediaEl.addEventListener("click", onMediaSelect);
+      mediaEl.addEventListener("pointerdown", onPointerDown);
+      cleanups.push(() => mediaEl.removeEventListener("click", onMediaSelect));
+      cleanups.push(() => mediaEl.removeEventListener("pointerdown", onPointerDown));
+      cleanups.push(() => window.removeEventListener("pointermove", onPointerMove));
+      cleanups.push(() => window.removeEventListener("pointerup", onPointerUp));
+    }
+
+    const onStageSelect = () => setSelectedSegment({ type: "slide", label: "슬라이드" });
+    stage.addEventListener("click", onStageSelect);
+    cleanups.push(() => stage.removeEventListener("click", onStageSelect));
 
     return () => cleanups.forEach((fn) => fn());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slide.html, saveField]);
+  }, [items, saveField, scale, slide.html, slide.style]);
 
-  // Scale-to-fit measurement (mirrors SlideRenderer).
   useEffect(() => {
-    const el = outerRef.current;
+    const stage = stageRef.current;
+    if (!stage) return;
+    stage.querySelectorAll<HTMLElement>('[data-edit],[data-edit-segment="media"]').forEach((el) => {
+      el.style.outline = "";
+      el.style.outlineOffset = "";
+      el.style.boxShadow = "";
+    });
+    if (!selectedSegment) return;
+    const selector = selectedSegment.type === "media"
+      ? '[data-edit-segment="media"],[data-edit="media"]'
+      : selectedSegment.type === "item"
+        ? `[data-edit="item"][data-edit-index="${selectedSegment.index}"]`
+        : `[data-edit="${selectedSegment.type}"]`;
+    stage.querySelectorAll<HTMLElement>(selector).forEach((el) => {
+      el.style.outline = "3px solid rgba(105,124,112,0.85)";
+      el.style.outlineOffset = "8px";
+      el.style.boxShadow = "0 0 0 9999px rgba(255,255,255,0.02)";
+    });
+  }, [selectedSegment, slide.html]);
+
+  useEffect(() => {
+    setSelectedSegment(null);
+  }, [slide.id]);
+
+  useEffect(() => {
+    const el = canvasRef.current;
     if (!el) return;
     const measure = () => {
       const rect = el.getBoundingClientRect();
@@ -171,10 +245,6 @@ export function EditableSlideView({
     measure();
     return () => obs.disconnect();
   }, []);
-
-  const scale = dims ? Math.min(dims.w / slideW, dims.h / slideH) : 0;
-  const scaledW = Math.floor(slideW * scale);
-  const scaledH = Math.floor(slideH * scale);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -196,13 +266,16 @@ export function EditableSlideView({
       media: { ...slide.media, fit: slide.media.fit === "cover" ? "contain" : "cover" },
     });
 
-  const barBtn =
-    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-border text-xs font-medium text-foreground hover:border-accent shadow-sm";
-
   return (
     <div
       ref={outerRef}
-      style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", ...style }}
+      style={{
+        position: "relative",
+        display: "flex",
+        boxSizing: "border-box",
+        minWidth: 0,
+        ...style,
+      }}
     >
       <input
         ref={fileRef}
@@ -211,90 +284,65 @@ export function EditableSlideView({
         className="hidden"
         onChange={handleFile}
       />
-      {scale > 0 && (
-        <div
-          style={{
-            width: scaledW,
-            height: scaledH,
-            overflow: "hidden",
-            borderRadius: 8,
-            position: "relative",
-            boxShadow: "0 0 0 2px var(--color-accent, #9E6B45), 0 4px 24px rgba(0,0,0,0.12)",
-          }}
-        >
+      <div
+        ref={canvasRef}
+        style={{
+          position: "relative",
+          flex: 1,
+          minWidth: 0,
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {scale > 0 && (
           <div
-            ref={stageRef}
             style={{
-              width: slideW,
-              height: slideH,
-              transform: `scale(${scale})`,
-              transformOrigin: "top left",
-              position: "absolute",
-              top: 0,
-              left: 0,
+              width: scaledW,
+              height: scaledH,
+              overflow: "hidden",
+              borderRadius: 8,
+              position: "relative",
+              boxShadow: "0 0 0 2px var(--color-accent, #9E6B45), 0 4px 24px rgba(0,0,0,0.12)",
             }}
-          />
-          {/* Image region controls */}
-          {mediaCenter && (
+          >
             <div
+              ref={stageRef}
               style={{
+                width: slideW,
+                height: slideH,
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
                 position: "absolute",
-                left: mediaCenter.left * scale,
-                top: mediaCenter.top * scale,
-                transform: "translate(-50%, -50%)",
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
+                top: 0,
+                left: 0,
               }}
-            >
-              <button type="button" onClick={() => fileRef.current?.click()} className={barBtn}>
-                <ImageUp className="h-3.5 w-3.5" /> 이미지 교체
-              </button>
-              <button type="button" onClick={toggleFit} className={barBtn}>
-                <Maximize className="h-3.5 w-3.5" />
-                {slide.media?.fit === "contain" ? "맞추기" : "채우기"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Bottom action bar: tone picker + structural edits */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
-        <div className="flex items-center gap-1 bg-white border border-border rounded-full px-2 py-1 shadow-sm">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">tone</span>
-          {TONES.map((t) => (
-            <button
-              key={t.v}
-              type="button"
-              onClick={() => saveField({ tone: t.v })}
-              className={`text-[11px] px-2 py-0.5 rounded-full transition-colors ${
-                slide.tone === t.v
-                  ? "bg-accent text-white"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        {isList && (
-          <button type="button" onClick={() => saveField({ items: [...items, "새 항목"] })} className={barBtn}>
-            <Plus className="h-3.5 w-3.5" /> 항목
-          </button>
-        )}
-        {canAddBody && (
-          <button type="button" onClick={() => saveField({ body: "본문을 입력하세요" })} className={barBtn}>
-            <Type className="h-3.5 w-3.5" /> 본문
-          </button>
+            />
+          </div>
         )}
       </div>
 
+      <SlideEditControls
+        slide={slide}
+        items={items}
+        canAddBody={canAddBody}
+        hasMedia={hasMedia}
+        selectedSegment={selectedSegment}
+        onPatch={saveField}
+        onReplaceImage={() => fileRef.current?.click()}
+        onToggleMediaFit={toggleFit}
+      />
+
       {saving && (
-        <div className="absolute top-2 right-2 text-[11px] text-muted-foreground bg-white/80 rounded px-2 py-0.5">
+        <div className="absolute left-2 top-2 rounded bg-white/80 px-2 py-0.5 text-[11px] text-muted-foreground">
           저장 중…
         </div>
       )}
     </div>
   );
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

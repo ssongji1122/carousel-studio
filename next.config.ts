@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1"],
   serverExternalPackages: ["sharp", "archiver", "puppeteer"],
   async headers() {
     return [
@@ -16,7 +17,7 @@ const nextConfig: NextConfig = {
               "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
               "img-src 'self' data: blob: https:",
               "frame-src 'self' blob:",
-              "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com",
+              "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net",
             ].join("; "),
           },
         ],
