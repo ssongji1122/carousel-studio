@@ -12,10 +12,12 @@ export interface BrandBrief {
   avoid?: string;
 }
 
+const DEFAULT_API_BASE_URL = "http://localhost:3000";
+
 export function buildBrandGeneratePrompt(
   brief: BrandBrief,
   genDir: string,
-  baseUrl = "http://localhost:3000"
+  baseUrl = DEFAULT_API_BASE_URL
 ): string {
   return `당신은 브랜드 디자인 도우미입니다. 아래 답변만으로 브랜드를 설계하세요(기존 문서 없음).
 

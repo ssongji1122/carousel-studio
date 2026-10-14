@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/request-origin";
 import { NextRequest, NextResponse } from "next/server";
 import {
   hasAvailableAgentProvider,
@@ -52,7 +53,7 @@ export async function POST(
   const prompt = buildPlannerPrompt(
     context.brand,
     plan,
-    new URL(request.url).origin,
+    getRequestOrigin(request),
     context.creativeGuides
   );
 

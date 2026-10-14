@@ -7,13 +7,21 @@ import { sanitizeToolBrandReferenceList, sanitizeToolBrandReferences } from "@/l
 import { buildCreativeGuidesFromBrand } from "@/lib/creative-guides";
 import type { CreativeGuides, SlidePlanItem } from "@/types/creative-guide";
 
+const DEFAULT_API_BASE_URL = "http://localhost:3000";
+interface SystemPromptOptions {
+  readonly stylePreset?: StylePreset | null;
+  readonly apiBaseUrl?: string;
+  readonly guides?: CreativeGuides;
+}
+
 export function buildSystemPrompt(
   brand: BrandConfig,
   carousel?: Carousel | null,
-  stylePreset?: StylePreset | null,
-  baseUrl = "http://localhost:3000",
-  guides: CreativeGuides = buildCreativeGuidesFromBrand(brand)
+  options: SystemPromptOptions = {}
 ): string {
+  const stylePreset = options.stylePreset ?? null;
+  const baseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE_URL;
+  const guides = options.guides ?? buildCreativeGuidesFromBrand(brand);
   const brandSection = brand.name
       ? `## Brand identity
 - Name: ${brand.name}
@@ -22,7 +30,10 @@ export function buildSystemPrompt(
 - Heading font: "${brand.fonts.heading}" | Body font: "${brand.fonts.body}"
 - Logo: ${brand.logoPath ? brand.logoPath : "none"}
 - Style: ${brand.styleKeywords.length > 0 ? brand.styleKeywords.join(", ") : "professional, clean"}
-${formatBrandKit(brand, guides)}`
+${formatBrandKit(brand, guides)}
+${brand.imageAssets?.length ? `## Brand photos
+Use the saved brand feed images as slide media: ${brand.imageAssets.map((asset) => JSON.stringify(asset)).join(", ")}
+Include media with type "image", src from this list, fit "cover", and source "uploaded".` : ""}`
     : `## Brand not configured
 Stop. Ask the user to complete the brand settings first. Do not create slides, captions, or HTML until the brand is configured.`;
 

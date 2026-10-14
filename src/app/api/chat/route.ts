@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/request-origin";
 import { NextRequest, NextResponse } from "next/server";
 import { buildSystemPrompt } from "@/lib/chat-system-prompt";
 import { getCarousel } from "@/lib/carousels";
@@ -71,13 +72,11 @@ export async function POST(request: NextRequest) {
     throw error;
   }
 
-  const baseUrl = new URL(request.url).origin;
+  const baseUrl = getRequestOrigin(request);
   const systemPrompt = buildSystemPrompt(
     context.brand,
     carousel,
-    context.stylePreset,
-    baseUrl,
-    context.creativeGuides
+    { stylePreset: context.stylePreset, apiBaseUrl: baseUrl, guides: context.creativeGuides }
   );
   const encoder = new TextEncoder();
   const abortController = new AbortController();

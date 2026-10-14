@@ -10,6 +10,7 @@
 
 import sharp from "sharp";
 import { promises as fs } from "fs";
+import path from "path";
 
 const IG_APP_ID = "936619743392459";
 const IG_UA =
@@ -243,6 +244,33 @@ export function profileImageUrls(profile: IgProfile): string[] {
   return [
     ...profile.posts.map((p) => p.imageUrl).filter((u): u is string => !!u),
   ];
+}
+
+/** Download the feed's representative images to /public/uploads so they survive
+ * Instagram's CDN expiry, and can be placed into carousel slides as media.
+ * Returns the public URLs (e.g. "/uploads/ig-roseshaker/0.jpg"). */
+export async function downloadFeedImages(handle: string, urls: string[]): Promise<string[]> {
+  const safe = handle.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const dir = path.resolve(process.cwd(), "public", "uploads", `ig-${safe}`);
+  await fs.mkdir(dir, { recursive: true });
+  const top = urls.filter(Boolean).slice(0, 6);
+  const saved: (string | null)[] = await Promise.all(
+    top.map(async (url, i) => {
+      try {
+        const res = await fetch(url, { headers: IG_HEADERS });
+        if (!res.ok) return null;
+        const buf = Buffer.from(await res.arrayBuffer());
+        await sharp(buf)
+          .resize(1080, 1080, { fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: 82 })
+          .toFile(path.join(dir, `${i}.jpg`));
+        return `/uploads/ig-${safe}/${i}.jpg`;
+      } catch {
+        return null;
+      }
+    })
+  );
+  return saved.filter((s): s is string => !!s);
 }
 
 /** Extract a dominant + accent palette from a local image file (a reference

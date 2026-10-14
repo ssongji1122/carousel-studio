@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/request-origin";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { mkdir, readFile } from "fs/promises";
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
   const prompt = buildBrandGeneratePrompt(
     brief,
     genDir,
-    new URL(request.url).origin
+    getRequestOrigin(request)
   );
 
   try {

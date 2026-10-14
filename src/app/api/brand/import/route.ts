@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/request-origin";
 import { NextRequest, NextResponse } from "next/server";
 import {
   hasAvailableAgentProvider,
@@ -6,7 +7,7 @@ import {
 } from "@/lib/agent-providers";
 import { resolveActiveBrand } from "@/lib/resolve-brand";
 import { buildBrandImportPrompt } from "@/lib/brand-import-prompt";
-import { fetchInstagramProfile, extractPalette, profileImageUrls } from "@/lib/instagram-brand";
+import { fetchInstagramProfile, extractPalette, profileImageUrls, downloadFeedImages } from "@/lib/instagram-brand";
 import { fetchWebsiteSignals, resolveBrandWebsite } from "@/lib/website-brand";
 import { buildBrandDoc, type BrandSources } from "@/lib/brand-doc";
 import { buildBrandAnalysis, applyBrandAnalysis } from "@/lib/brand-analysis";
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
   // accent is often a low-frequency color a human spots instantly.
   let extractedPalette: string[] = [];
   let collectedSources: BrandSources | null = null;
+  let imageAssets: string[] = [];
   if (instagram || website) {
     try {
       const sources: BrandSources = {};
@@ -58,6 +60,10 @@ export async function POST(request: NextRequest) {
           profile.profilePicUrl ?? undefined
         );
         sources.ig = { profile, palette };
+        imageAssets = await downloadFeedImages(
+          instagram,
+          profile.posts.map((post) => post.imageUrl).filter((url): url is string => !!url)
+        );
         // No website given? Discover the official site from the profile's
         // bio links (unwrapping IG redirects and litt.ly aggregators).
         if (!siteUrl) {
@@ -94,7 +100,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "docs too large" }, { status: 413 });
   }
 
-  const prompt = buildBrandImportPrompt(docs, new URL(request.url).origin);
+  const prompt = buildBrandImportPrompt(docs, getRequestOrigin(request));
 
   try {
     await runAgentWithFallback({
@@ -114,6 +120,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Brand import failed" }, { status: 502 });
   }
 
+  if (imageAssets.length) {
+    await updateBrand(await getActiveProjectId(), { imageAssets });
+  }
   const updated = await resolveActiveBrand();
   if (collectedSources) {
     const analysis = buildBrandAnalysis(collectedSources, updated);

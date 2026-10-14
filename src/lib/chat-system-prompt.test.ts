@@ -50,12 +50,19 @@ describe("buildSystemPrompt chain", () => {
     expect(p).toContain("Do not create slides");
     expect(p).not.toContain("Use professional defaults");
   });
+  it("preserves imported feed images alongside project-specific creative guides", () => {
+    const imagePath = "/brand/feed/brand-photo.jpg";
+    const p = buildSystemPrompt({ ...POGON_SEED, imageAssets: [imagePath] }, carousel("instagram"));
+    expect(p).toContain(imagePath);
+    expect(p).toContain("Brand photos");
+    expect(p).toContain("Creative guides");
+    expect(p).toContain("구름형 캐릭터");
+  });
   it("uses the current app origin for API calls", () => {
     const p = buildSystemPrompt(
       STUDIO_SOLUTA_SEED,
       carousel("instagram"),
-      null,
-      "http://127.0.0.1:3107"
+      { apiBaseUrl: "http://127.0.0.1:3107" }
     );
     expect(p).toContain("http://127.0.0.1:3107/api/carousels/c1/slides");
     expect(p).not.toContain("http://localhost:3000/api/carousels/c1/slides");

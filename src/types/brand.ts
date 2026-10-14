@@ -109,6 +109,7 @@ export interface BrandConfig {
   logoPath: string | null;
   styleKeywords: string[];
   voice: BrandVoice;
+  imageAssets?: string[];
   kit?: BrandKit;
   analysis?: BrandAnalysis;
   createdAt: string;

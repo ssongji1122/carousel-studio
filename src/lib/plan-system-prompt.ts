@@ -5,10 +5,12 @@ import { sanitizeToolBrandReferenceList, sanitizeToolBrandReferences } from "@/l
 import { buildCreativeGuidesFromBrand } from "@/lib/creative-guides";
 import type { CreativeGuides } from "@/types/creative-guide";
 
+const DEFAULT_API_BASE_URL = "http://localhost:3000";
+
 export function buildPlannerPrompt(
   brand: BrandConfig,
   plan: Plan,
-  baseUrl = "http://localhost:3000",
+  baseUrl = DEFAULT_API_BASE_URL,
   guides: CreativeGuides = buildCreativeGuidesFromBrand(brand)
 ): string {
   const v = brand.voice;

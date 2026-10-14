@@ -3,9 +3,11 @@
 // profile, then PUT it to /api/brand. Markdown prose is unreliable to parse
 // by regex, so we let Claude do the extraction and write the result back via
 // the existing brand API (same curl pattern as the rest of the app).
+const DEFAULT_API_BASE_URL = "http://localhost:3000";
+
 export function buildBrandImportPrompt(
   docs: string,
-  baseUrl = "http://localhost:3000"
+  baseUrl = DEFAULT_API_BASE_URL
 ): string {
   return `당신은 브랜드 문서에서 디자인 토큰을 추출하는 도우미입니다.
 
